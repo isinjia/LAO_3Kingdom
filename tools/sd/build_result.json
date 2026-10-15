@@ -1,0 +1,2817 @@
+{
+ "AGS_MrAlfred2": {
+  "nodes": 344,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 517,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Tyrant": {
+  "nodes": 218,
+  "clips": [
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 507,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_InvDragon": {
+  "nodes": 384,
+  "clips": [
+   "idle",
+   "move",
+   "die"
+  ],
+  "kb": 281,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_PA00EL": {
+  "nodes": 119,
+  "clips": [
+   "idle",
+   "hit",
+   "move",
+   "die"
+  ],
+  "kb": 112,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_JangHwa": {
+  "nodes": 159,
+  "clips": [
+   "idle",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 195,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_LemonadeEpsilon": {
+  "ok": 1,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "note": "rebuilt after numeric-name fix"
+ },
+ "PECS_LemonadeGamma": {
+  "ok": 1,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "note": "rebuilt after numeric-name fix"
+ },
+ "BR_Marie": {
+  "nodes": 255,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 550,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_BlackLilith": {
+  "nodes": 264,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 284,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Serpent": {
+  "nodes": 157,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 277,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Kheshig": {
+  "nodes": 186,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "move",
+   "die"
+  ],
+  "kb": 197,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Vanilla": {
+  "nodes": 250,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 317,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Scathy": {
+  "nodes": 171,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 287,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Cheona": {
+  "nodes": 238,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 489,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Eternity": {
+  "nodes": 256,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 314,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_TalonFeather": {
+  "nodes": 217,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 408,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_May": {
+  "nodes": 314,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 417,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_LemonadeAlpha": {
+  "nodes": 144,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 247,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_HongRyun": {
+  "nodes": 267,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 420,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_QuickCamel": {
+  "nodes": 149,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 174,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Tomoe": {
+  "nodes": 340,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 281,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Phantom": {
+  "nodes": 328,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 229,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_Arman": {
+  "nodes": 144,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 171,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Alexandra": {
+  "nodes": 403,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 321,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Salamander": {
+  "nodes": 191,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 272,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Khan": {
+  "nodes": 426,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 412,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_RedHood": {
+  "nodes": 334,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 482,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_WarWolf": {
+  "nodes": 132,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 249,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Amy": {
+  "nodes": 356,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 523,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Fortune": {
+  "nodes": 445,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 616,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Sekhmet": {
+  "nodes": 181,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 510,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Vargr": {
+  "nodes": 270,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 676,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_RoyalArsenal": {
+  "nodes": 251,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 353,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Express76": {
+  "nodes": 213,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 244,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_Johanna": {
+  "nodes": 144,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 347,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_NightAngel": {
+  "nodes": 230,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 222,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Alice": {
+  "nodes": 375,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 437,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Brunhild": {
+  "nodes": 258,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 612,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Sirene": {
+  "nodes": 298,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 314,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Orangeade": {
+  "nodes": 228,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 528,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Echidna": {
+  "nodes": 346,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 675,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_StratoAngel": {
+  "nodes": 241,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 426,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Miho": {
+  "nodes": 169,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 129,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Aqua": {
+  "nodes": 172,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 336,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Ajax": {
+  "nodes": 158,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 229,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Dryad": {
+  "nodes": 253,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 469,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Melite": {
+  "nodes": 457,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 955,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Aeda": {
+  "nodes": 256,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 882,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Goltarion": {
+  "nodes": 267,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 1229,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_SpartanA": {
+  "nodes": 81,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 74,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_AS12TurtleDragon": {
+  "nodes": 362,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 263,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_BloodyPanther": {
+  "nodes": 173,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 195,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Efreeti": {
+  "nodes": 200,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 199,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Hyena": {
+  "nodes": 164,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 215,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_PXSilky": {
+  "nodes": 258,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 366,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Spriggan": {
+  "nodes": 206,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 184,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_Charlotte": {
+  "nodes": 275,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 516,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_Saraqael": {
+  "nodes": 156,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 573,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Carolina": {
+  "nodes": 255,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 443,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Draculina": {
+  "nodes": 324,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 791,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Glacias": {
+  "nodes": 308,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 1264,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_LemonadeBeta": {
+  "nodes": 689,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 3556,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_MightyR": {
+  "nodes": 144,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 172,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_PuppHead": {
+  "nodes": 80,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 155,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Spartoia": {
+  "nodes": 303,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 414,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Triton": {
+  "nodes": 213,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 395,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Poi": {
+  "nodes": 214,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 475,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Amphitrite": {
+  "nodes": 228,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 285,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Fenrir": {
+  "nodes": 367,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 521,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Ran": {
+  "nodes": 227,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 403,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Albatross": {
+  "nodes": 70,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 194,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Rampart": {
+  "nodes": 69,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 67,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_SpartanB": {
+  "nodes": 83,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 76,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Alvis": {
+  "nodes": 177,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 175,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Bulgasari": {
+  "nodes": 139,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 181,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Ellie": {
+  "nodes": 209,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 374,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Io": {
+  "nodes": 226,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 188,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Pani": {
+  "nodes": 131,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 143,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Wraithy": {
+  "nodes": 95,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 123,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_Cloverace": {
+  "nodes": 228,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 510,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Audrey": {
+  "nodes": 342,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 649,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Cerberus": {
+  "nodes": 139,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 201,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Drone": {
+  "nodes": 58,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 158,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_HighElven": {
+  "nodes": 230,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 416,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_MissSafety": {
+  "nodes": 107,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 216,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_QueenMane": {
+  "nodes": 300,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 651,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Stinger": {
+  "nodes": 112,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 266,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Veronica": {
+  "nodes": 266,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 381,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Sowan": {
+  "nodes": 266,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 524,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Annie": {
+  "nodes": 247,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 352,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Frigga": {
+  "nodes": 241,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 298,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Rhea": {
+  "nodes": 260,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 392,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Arachne": {
+  "nodes": 133,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 317,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_RheinRitter": {
+  "nodes": 91,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 254,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_SpartanC": {
+  "nodes": 83,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 79,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Andvari": {
+  "nodes": 220,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 440,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Calista": {
+  "nodes": 189,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 188,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Emily": {
+  "nodes": 771,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 551,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Lindwurm": {
+  "nodes": 264,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 237,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_PoniesAnger": {
+  "nodes": 324,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 428,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_Angel": {
+  "nodes": 198,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 825,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_Faucre": {
+  "nodes": 184,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 296,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Azaz": {
+  "nodes": 199,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 295,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Circe": {
+  "nodes": 227,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 493,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_DutchGirl": {
+  "nodes": 277,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 792,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Hussar": {
+  "nodes": 209,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 452,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Mnemosyne": {
+  "nodes": 197,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 370,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Rena": {
+  "nodes": 219,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 371,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Sunny": {
+  "nodes": 209,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 268,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "ST_Lancer": {
+  "nodes": 271,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 289,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Hachiko": {
+  "nodes": 362,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 258,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Aurora": {
+  "nodes": 284,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 500,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Galatea": {
+  "nodes": 189,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 239,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Salacia": {
+  "nodes": 250,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 317,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Fallen": {
+  "nodes": 78,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 150,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Roc": {
+  "nodes": 402,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 450,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Stronghold": {
+  "nodes": 133,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 404,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_BeastHunter": {
+  "nodes": 143,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 195,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Daika": {
+  "nodes": 165,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 179,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Gremlin": {
+  "nodes": 187,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 202,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Neodym": {
+  "nodes": 427,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 917,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_SandMan": {
+  "nodes": 108,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 236,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_Atalanta": {
+  "nodes": 210,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 252,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_KunoichiEnrai": {
+  "nodes": 276,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 507,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_BS": {
+  "nodes": 310,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 695,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_CoCoWhiteShell": {
+  "nodes": 315,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 393,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Ella": {
+  "nodes": 247,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 518,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Ignis": {
+  "nodes": 221,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 302,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Lumberjane": {
+  "nodes": 279,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 322,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Muse": {
+  "nodes": 237,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 756,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Sadius": {
+  "nodes": 451,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 1098,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Tiequan": {
+  "nodes": 135,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 147,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "ST_Ullr": {
+  "nodes": 275,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 995,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Daphne": {
+  "nodes": 108,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 127,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_BlackWyrm": {
+  "nodes": 258,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 453,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Hirume": {
+  "nodes": 327,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 703,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_ScissorsLise": {
+  "nodes": 169,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 461,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Fortress": {
+  "nodes": 134,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 134,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Seljuq": {
+  "nodes": 113,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 147,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Watcher": {
+  "nodes": 88,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 224,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Bheur": {
+  "nodes": 167,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 200,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Djinnia": {
+  "nodes": 169,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 289,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Habetrot": {
+  "nodes": 154,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 243,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Nereid": {
+  "nodes": 373,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 414,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Scarabya": {
+  "nodes": 371,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 958,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_Baekto": {
+  "nodes": 468,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 746,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_KunoichiKaen": {
+  "nodes": 363,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 986,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Babariana": {
+  "nodes": 168,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 218,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_CyclopsePrincess": {
+  "nodes": 244,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 536,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_ElvenForestmaker": {
+  "nodes": 351,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 481,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_LRL": {
+  "nodes": 254,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 678,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Machina": {
+  "nodes": 181,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 985,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Olivia": {
+  "nodes": 435,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 1045,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Saetti": {
+  "nodes": 204,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 339,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_TommyWalker": {
+  "nodes": 174,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 213,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Fotia": {
+  "nodes": 326,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 317,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_CSPerrault": {
+  "nodes": 215,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 87,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_Maria": {
+  "nodes": 208,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 290,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "3P_SnowFeather": {
+  "nodes": 323,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 702,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Gigantes": {
+  "nodes": 93,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 157,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "AGS_Shade": {
+  "nodes": 78,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 152,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_ALWraith": {
+  "nodes": 164,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 272,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Blackhound": {
+  "nodes": 165,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 269,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_DrM": {
+  "nodes": 292,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 325,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Hraesvelgr": {
+  "nodes": 179,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 456,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_NickyTracy": {
+  "nodes": 247,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 672,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "BR_Shirayuri": {
+  "nodes": 321,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 471,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_BunnySlayer": {
+  "nodes": 204,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 494,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "DS_MoMo": {
+  "nodes": 219,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 553,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Boryeon": {
+  "nodes": 193,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 562,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_DarkElf": {
+  "nodes": 364,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 513,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Erato": {
+  "nodes": 411,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 680,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Leanne": {
+  "nodes": 163,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 430,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Mery": {
+  "nodes": 198,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 509,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Peregrinus": {
+  "nodes": 153,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 287,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Sonia": {
+  "nodes": 228,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 479,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ },
+ "PECS_Triaina": {
+  "nodes": 430,
+  "clips": [
+   "idle",
+   "atk",
+   "skill",
+   "hit",
+   "win",
+   "move",
+   "die"
+  ],
+  "kb": 532,
+  "missing_skins": 0,
+  "unity_mesh": true,
+  "ok": 1
+ }
+}

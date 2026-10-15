@@ -1,0 +1,27 @@
+[
+ {
+  "goto": "/index.html",
+  "wait": 2000
+ },
+ {
+  "eval": "const t0=Date.now(); while (Date.now()-t0 < 90000 && !(document.readyState==='complete' && !document.getElementById('boot') && typeof Sound!=='undefined' && typeof newGame!=='undefined' && typeof UI!=='undefined' && UI.ending && typeof LINE_PEER!=='undefined')) await new Promise(r=>setTimeout(r,250)); return 'ready ' + (Date.now()-t0) + 'ms';"
+ },
+ {
+  "eval": "if (typeof newGame === 'undefined') return 'NOT LOADED'; localStorage.setItem('lao3k_tut','1'); newGame('3P_Alice',{}); UI.sel=P().city; UI.show('main'); UI.render(); return P().name + ' / 군주 ' + (P().fac ? U(F(P().fac).lord).name : '없음');"
+ },
+ {
+  "wait": 2000
+ },
+ {
+  "eval": "U(F(P().fac).lord).bond = 0; Math.random = () => 0.99; G.year=5; G.month=10; G.queue.length=0; endMonth(); UI.flush(); return G.queue.map(e=>e.type).join(',');"
+ },
+ {
+  "wait": 2500
+ },
+ {
+  "eval": "const seen=[]; var idle=0; let res=''; for (let k=0;k<60;k++){ const v=document.querySelector('.vn'); const m=document.querySelector('.modalBg'); if (v) { const t=(v.dataset.full||'')+' '+(v.innerText||''); if (t.includes('나:')) res=t.split(String.fromCharCode(10)).join(' ').slice(0,200); seen.push('vn'); v.click(); } else if (m) { seen.push('modal:'+m.innerText.slice(0,10)); const bs=m.querySelectorAll('button'); (bs[1]||bs[0]).click(); } else { idle=(typeof idle==='number'?idle:0)+1; if (idle>8) break; await new Promise(r=>setTimeout(r,500)); continue; } idle=0; await new Promise(r=>setTimeout(r,800)); } return seen.join(' > ') + ' | route=' + G.flags.route + ' | ' + res;"
+ },
+ {
+  "shot": "smoke_advise"
+ }
+]

@@ -1,0 +1,36 @@
+[
+ {
+  "goto": "/index.html",
+  "wait": 2000
+ },
+ {
+  "eval": "const t0=Date.now(); while (Date.now()-t0 < 90000 && !(document.readyState==='complete' && !document.getElementById('boot') && typeof Sound!=='undefined' && typeof newGame!=='undefined' && typeof UI!=='undefined' && UI.ending && typeof LINE_PEER!=='undefined')) await new Promise(r=>setTimeout(r,250)); return 'ready ' + (Date.now()-t0) + 'ms';"
+ },
+ {
+  "eval": "if (typeof newGame === 'undefined') return 'NOT LOADED'; localStorage.setItem('lao3k_tut','1'); newGame('3P_Alice',{}); UI.sel=P().city; UI.show('main'); UI.render(); const p=P(); const c=C(p.city); c.gov=p.id; p.merit=3000; G.ap=100; G.flags.ev_signal3=true; G.flags.route='force'; G.queue.length=0; actIndependence(); UI.flush(); return 'independent: ' + F(p.fac).name;"
+ },
+ {
+  "wait": 2000
+ },
+ {
+  "eval": "const seen=[]; var idle=0; for (let k=0;k<20;k++){ const m=document.querySelector('.modalBg'); const v=document.querySelector('.vn'); if (v) { v.click(); } else if (m) { const t=m.innerText.split(String.fromCharCode(10)).join(' '); seen.push(t.slice(0,40)); const bs=m.querySelectorAll('button'); (bs[1]||bs[0]).click(); } else { idle=(typeof idle==='number'?idle:0)+1; if (idle>8) break; await new Promise(r=>setTimeout(r,500)); continue; } idle=0; await new Promise(r=>setTimeout(r,800)); } return seen.join(' > ') + ' | route=' + G.flags.route;"
+ },
+ {
+  "eval": "G.flags.ev_lastLetter=true; UI.ending({ win: true, fac: P().fac }); await new Promise(r=>setTimeout(r,1500)); const t=document.querySelector('#prologue') ? document.querySelector('#prologue').textContent : ''; return 'ending: routeLine=' + (t.includes('함께 살아') ? '함께 살아' : 'none') + ' · ' + t.slice(0,200);"
+ },
+ {
+  "wait": 12000
+ },
+ {
+  "shot": "smoke_end"
+ },
+ {
+  "eval": "UI.title(); await new Promise(r=>setTimeout(r,800)); UI.records(); await new Promise(r=>setTimeout(r,600)); const m=document.querySelector('.modalBg'); return 'records: ' + (m ? m.innerText.split(String.fromCharCode(10)).join(' ').slice(0,200) : 'none');"
+ },
+ {
+  "wait": 800
+ },
+ {
+  "shot": "smoke_records"
+ }
+]

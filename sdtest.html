@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><title>SD test</title>
+<style>body{margin:0;background:#223}#s{position:relative;width:100vw;height:100vh}</style></head><body><div id="s"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/sd.js"></script><script src="js/lao_official.js"></script><script src="js/data.js"></script><script src="js/game.js"></script><script src="js/stage.js"></script>
+<script>
+newGame('3P_Labiata',{});
+const st = Stage.create(document.getElementById('s'));
+const A=[st.add('3P_Labiata',-5,-3,3.2,1), st.add('BR_Leona',-2,-3,3.2,1), st.add('BR_Marie',1,-3,3.2,-1), st.add('Centurion',4.5,-3,3.4,-1), st.add('_militia',6.5,-3,2.4,-1)];
+window.T={st,A};
+</script></body></html>

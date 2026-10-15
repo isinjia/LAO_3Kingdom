@@ -1,0 +1,45 @@
+[
+ {
+  "goto": "/index.html",
+  "wait": 2000
+ },
+ {
+  "eval": "const t0=Date.now(); while (Date.now()-t0 < 90000 && !(document.readyState==='complete' && !document.getElementById('boot') && typeof Sound!=='undefined' && typeof newGame!=='undefined' && typeof UI!=='undefined' && UI.ending && typeof LINE_PEER!=='undefined')) await new Promise(r=>setTimeout(r,250)); return 'ready ' + (Date.now()-t0) + 'ms';"
+ },
+ {
+  "shot": "smoke_01_title"
+ },
+ {
+  "eval": "if (typeof newGame === 'undefined') return 'NOT LOADED'; localStorage.setItem('lao3k_tut','1'); newGame('3P_Labiata',{}); UI.sel=P().city; UI.show('main'); UI.render(); return 'new game ' + P().name;"
+ },
+ {
+  "wait": 2500
+ },
+ {
+  "shot": "smoke_02_main"
+ },
+ {
+  "eval": "G.year=5; G.month=10; G.queue.length=0; endMonth(); const q=G.queue.map(e=>e.type+(e.bg?':'+e.bg:'')).join(','); UI.flush(); return q;"
+ },
+ {
+  "wait": 2500
+ },
+ {
+  "eval": "const seen=[]; var idle=0; for (let k=0;k<30;k++){ const v=document.querySelector('.vn'); const m=document.querySelector('.modalBg'); if (v) { seen.push('vn'); (v.querySelector('.vnSkip')||v).click(); } else if (m) { const t=m.innerText.slice(0,12); seen.push('modal:'+t); if (t.includes('노선')) { window.__route=m.innerText.slice(0,200); } (m.querySelector('button.primary')||m.querySelector('button')).click(); } else { idle=(typeof idle==='number'?idle:0)+1; if (idle>8) break; await new Promise(r=>setTimeout(r,500)); continue; } idle=0; await new Promise(r=>setTimeout(r,700)); } return seen.join(' > ') + ' | route=' + G.flags.route;"
+ },
+ {
+  "wait": 1500
+ },
+ {
+  "eval": "UI.chronicle(); return document.querySelector('.arc') ? document.querySelector('.arc').innerText.replace(/\\s+/g,' ') : 'no arc';"
+ },
+ {
+  "wait": 1200
+ },
+ {
+  "shot": "smoke_03_chronicle"
+ },
+ {
+  "eval": "const key=(k)=>document.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true})); document.querySelectorAll('.modalBg').forEach(m=>m.remove()); await new Promise(r=>setTimeout(r,300)); key('c'); await new Promise(r=>setTimeout(r,400)); const c1=!!document.querySelector('.arc'); key('Escape'); await new Promise(r=>setTimeout(r,300)); const c2=!document.querySelector('.modalBg'); key('2'); await new Promise(r=>setTimeout(r,300)); const tab=UI.tab; const m0=G.month; key('n'); await new Promise(r=>setTimeout(r,1500)); const adv=G.month!==m0; return 'KEYS chron=' + c1 + ' esc=' + c2 + ' tab=' + tab + ' next=' + adv;"
+ }
+]

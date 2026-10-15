@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>라스트오리진 삼국지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700;800&family=Noto+Sans+KR:wght@400;500;700;900&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="boot"><b>라스트오리진 삼국지</b><span>불러오는 중…</span></div>
+<script>
+  // 부팅 진행률: 받은 스크립트 수 / 전체. 60초가 지나도 끝나지 않으면 다시 불러오기 안내
+  (function () {
+    const t0 = Date.now();
+    const iv = setInterval(function () {
+      const bt = document.getElementById("boot"); if (!bt || bt.classList.contains("done") || bt.querySelector("button")) return clearInterval(iv);
+      const total = Math.max(document.querySelectorAll("script[src]").length, 19);
+      const got = performance.getEntriesByType("resource").filter(function (r) { return /\.js(\?|$)/.test(r.name); }).length;
+      const sp = bt.querySelector("span"); if (sp) sp.textContent = "불러오는 중… " + Math.min(100, Math.round(got / total * 100)) + "%";
+      if (Date.now() - t0 > 60000) { clearInterval(iv); bt.insertAdjacentHTML("beforeend", '<small style="color:#9a958a">로딩이 오래 걸리고 있습니다</small><button class="primary" onclick="location.reload()">다시 불러오기</button>'); }
+    }, 300);
+  })();
+</script>
+
+<!-- 타이틀 -->
+<section id="title" class="screen">
+  <div class="titleBg"></div>
+  <div id="titleStage" class="titleStage"></div>
+  <div class="titleBox">
+    <div class="sub">LAST ORIGIN × 三國志 · 將帥制</div>
+    <h1><span class="t1">라스트오리진</span><span class="t2">삼국지</span></h1>
+    <p class="tag">사령관이 사라진 폐허 위에서, 천하는 누구의 것이 될 것인가</p>
+    <p class="clearInfo" id="clearInfo"></p>
+    <div class="titleBtns">
+      <button id="btnNew" class="primary">새로 시작</button>
+      <button id="btnContinue">이어하기</button>
+      <button id="btnTitleHelp">가이드</button>
+      <button id="btnTitleSet">설정</button>
+    </div>
+  </div>
+  <p class="fine">팬메이드 프로토타입 · 원작 데이터·에셋: LAST ORIGIN · 화면을 클릭하면 사운드가 재생됩니다</p>
+</section>
+
+<!-- 프롤로그 / 엔딩 -->
+<section id="prologue" class="screen">
+  <div class="prologueBox">
+    <div id="prologueText"></div>
+    <button id="prologueNext" class="primary">다음</button>
+  </div>
+</section>
+
+<!-- 장수 선택 -->
+<section id="select" class="screen">
+  <header class="selTop">
+    <button id="selBack">← 뒤로</button>
+    <h2 id="selTitle">세력 선택</h2>
+    <input id="selSearch" type="search" placeholder="이름 검색">
+  </header>
+  <div id="selBody" class="selBody"></div>
+</section>
+
+<!-- 메인 -->
+<section id="main" class="screen">
+  <header class="hdr">
+    <div class="logo">라오 <b>삼국지</b></div>
+    <div id="hdrDate" class="date"></div>
+    <div id="hdrFac" class="fac"></div>
+    <div id="apBar" class="apbox"></div>
+    <div class="goldBox"><i>자금</i><b id="hdrGold"></b></div>
+    <div class="unifyBox" id="hdrUnify"></div>
+    <div class="hbtns">
+      <button id="btnHere" title="현재 위치로">◎</button>
+      <button id="btnFac" title="세력 일람">세력</button>
+      <button id="btnUnits" title="장수 일람">장수</button>
+      <button id="btnDiplo" title="외교">외교</button>
+      <button id="btnHelp" title="게임 가이드">?</button>
+      <button id="btnSound" title="음소거">🔊</button>
+      <button id="btnMenu">메뉴 ▾</button>
+      <button id="btnEnd" class="primary">다음 달 ▶</button>
+    </div>
+  </header>
+  <div class="mainBody">
+    <div id="mapWrap">
+      <svg id="map" viewBox="0 0 1060 740" preserveAspectRatio="xMidYMid meet"></svg>
+      <div id="tip"></div>
+    </div>
+    <aside id="side"></aside>
+  </div>
+</section>
+
+<div id="battle" class="overlay"></div>
+<div id="duel" class="overlay"></div>
+<div id="debate" class="overlay"></div>
+<div id="modals"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/sd.js"></script>
+<script src="js/lao_official.js"></script>
+<script src="js/data.js"></script>
+<script src="js/city_bg.js"></script>
+<script src="js/audio_manifest.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/equip_data.js"></script>
+<script src="js/skills_data.js"></script>
+<script src="js/lines_data.js"></script>
+  <script src="js/lines_peer.js"></script>
+<script src="js/game.js"></script>
+<script src="js/equip.js"></script>
+<script src="js/sd_map.js"></script>
+<script src="js/stage.js"></script>
+<script src="js/events.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/ui_battle.js"></script>
+<script src="js/field.js"></script>
+</body>
+</html>

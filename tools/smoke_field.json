@@ -1,0 +1,45 @@
+[
+ {
+  "goto": "/index.html",
+  "wait": 2000
+ },
+ {
+  "eval": "const t0=Date.now(); while (Date.now()-t0 < 90000 && !(document.readyState==='complete' && !document.getElementById('boot') && typeof Field!=='undefined' && typeof newGame!=='undefined')) await new Promise(r=>setTimeout(r,250)); return 'ready ' + (Date.now()-t0) + 'ms';"
+ },
+ {
+  "eval": "localStorage.setItem('lao3k_tut','1'); localStorage.setItem('lao3k_fhelp2','1'); Battle.autoDuel=true; newGame('BR_Marie',{}); UI.show('main'); UI.render(); const p=P(); const to=neighbors(p.city).map(C).find(c=>c.owner && c.owner!==p.fac) || neighbors(p.city).map(C)[0]; const atk=unitsIn(p.city).filter(u=>u.fac===p.fac).slice(0,4).map(u=>({u,troops:Math.min(maxTroops(u),4000)})); window.__done=0; UI.battleEntry({war:{atkFac:p.fac, from:p.city, to:to.name, atk}, playerSide:'atk', commander:true}).then(()=>{window.__done=1}); await new Promise(r=>setTimeout(r,1000)); const m=document.querySelector('.modal.prep'); return 'prep ' + !!m + ' · ' + (m ? m.querySelector('.prepScout').innerText : '');"
+ },
+ {
+  "shot": "field_00_prep"
+ },
+ {
+  "eval": "document.querySelector('.formCard.rec').click(); const t0=Date.now(); while (Date.now()-t0<60000 && (!Field.groups || !Field.groups.length || Field.busy)) await new Promise(r=>setTimeout(r,250)); return 'started ' + (Date.now()-t0) + 'ms · groups ' + Field.groups.length + ' · soldiers ' + Field.groups.reduce((a,g)=>a+g.soldiers.length,0) + ' · forms ' + JSON.stringify(Field.form) + ' · skills ' + Field.sel.skills.map(s=>s.n+'/'+s.cost).join(',');"
+ },
+ {
+  "wait": 7000
+ },
+ {
+  "shot": "field_01_clash"
+ },
+ {
+  "eval": "const k=(key)=>document.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true})); k('2'); k('Tab'); k('t'); const g=Field.sel; const r1=g.b.name+':'+g.cmd+' scope '+Field.scope; k('Tab'); k('1'); for(let i=0;i<200 && !Field.finished;i++) Field.step(0.05); const tb=Date.now(); while(Field.busy && Date.now()-tb<8000) await new Promise(r=>setTimeout(r,200)); const L=Field.sel; L.mp=L.mpMax; const ok=Field.cast(L,1,true); await new Promise(r=>setTimeout(r,2500)); return r1 + ' · cast ' + ok + ' · log: ' + Field.logLines.slice(0,3).map(l=>l.t).join(' / ');"
+ },
+ {
+  "shot": "field_02_skill"
+ },
+ {
+  "eval": "const t0=Date.now(); while(Date.now()-t0<5000 && !Field.finished) await new Promise(r=>setTimeout(r,250)); return 't=' + Field.t.toFixed(1) + ' finished=' + Field.finished + ' · morale ' + Field.groups.map(g=>g.b.name+':'+Math.round(g.mor)).join(' ');"
+ },
+ {
+  "shot": "field_03_later"
+ },
+ {
+  "eval": "const before=C(Field.w.to).owner; if(!Field.finished) Field.finish(true,'테스트 종료'); const t0=Date.now(); while(Date.now()-t0<20000 && !document.querySelector('.resHead')) await new Promise(r=>setTimeout(r,250)); const rh=document.querySelector('.resHead'); const txt=rh?rh.innerText.split(String.fromCharCode(10)).join(' '):'none'; return 'RESULT ' + txt + ' · 거점 ' + before + ' → ' + C(Field.w.to).owner + ' · rows ' + [...document.querySelectorAll('.resRow')].map(r=>r.innerText.split(String.fromCharCode(10)).join(' ')).join(' / ');"
+ },
+ {
+  "shot": "field_04_result"
+ },
+ {
+  "eval": "const b=document.querySelector('.modalBg .btns button'); if(b) b.click(); await new Promise(r=>setTimeout(r,800)); return 'done=' + window.__done + ' fieldOpen=' + document.getElementById('field').classList.contains('on');"
+ }
+]

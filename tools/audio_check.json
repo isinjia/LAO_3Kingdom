@@ -1,0 +1,24 @@
+[
+ {
+  "goto": "/index.html",
+  "wait": 2000
+ },
+ {
+  "eval": "const t0=Date.now(); while (Date.now()-t0 < 90000 && !(document.readyState==='complete' && !document.getElementById('boot') && typeof Sound!=='undefined' && typeof newGame!=='undefined' && typeof UI!=='undefined' && UI.ending && typeof LINE_PEER!=='undefined')) await new Promise(r=>setTimeout(r,250)); return 'ready ' + (Date.now()-t0) + 'ms';"
+ },
+ {
+  "eval": "if (typeof Sound === 'undefined' || !Sound.state) return 'NOT LOADED'; Sound.setMuted(false); Sound.unlock(); Sound.bgm('map1', true); const t0=Date.now(); while (Date.now()-t0 < 20000 && !(Sound.state().bgmVol >= Sound.pref.bgm - 0.01)) await new Promise(r=>setTimeout(r,100)); return 'BGM ' + JSON.stringify(Sound.state()) + ' fadeIn=' + (Date.now()-t0) + 'ms';"
+ },
+ {
+  "eval": "const base = Sound.state().bgmVol; const ok = Sound.voice('BR_Leona', 'Join', ['Intro']); const t=[]; let min=1, playing=false; for (let i=0;i<40;i++){ await new Promise(r=>setTimeout(r,100)); const s=Sound.state(); t.push(s.bgmVol); min=Math.min(min, s.bgmVol); playing = playing || s.voicePlaying; } const t2=Date.now(); while (Date.now()-t2 < 20000 && Sound.state().voicePlaying) await new Promise(r=>setTimeout(r,200)); await new Promise(r=>setTimeout(r,1200)); const end=Sound.state().bgmVol; const duckDb = (20*Math.log10(min/base)).toFixed(1); return 'DUCK voice=' + ok + ' playing=' + playing + ' base=' + base + ' min=' + min + ' (' + duckDb + 'dB) end=' + end + ' restored=' + (Math.abs(end-base) < 0.02);"
+ },
+ {
+  "eval": "Sound.bgm('tense'); const t1=Date.now(); while (Date.now()-t1 < 20000 && !(Sound.state().bgm==='tense' && Sound.state().bgmVol >= Sound.pref.bgm - 0.01)) await new Promise(r=>setTimeout(r,100)); const s=Sound.state(); return 'SWITCH ' + JSON.stringify(s) + ' ok=' + (s.bgm==='tense' && s.bgmPlaying && Math.abs(s.bgmVol-Sound.pref.bgm)<0.02);"
+ },
+ {
+  "eval": "Sound.amb('amb_wind'); const t0=Date.now(); while (Date.now()-t0<20000 && !(Sound.state().ambVol >= Sound.pref.bgm-0.01)) await new Promise(r=>setTimeout(r,100)); const on=Sound.state(); Sound.stopAmb(); await new Promise(r=>setTimeout(r,900)); return 'AMB ' + on.amb + ' vol=' + on.ambVol + ' stopped=' + (Sound.state().amb===null) + ' ok=' + (on.ambVol >= Sound.pref.bgm-0.01);"
+ },
+ {
+  "eval": "const el = Sound.sfx('hit'); await new Promise(r=>setTimeout(r,300)); const r = 'SFX playing=' + !!(el && !el.paused || el && el.ended) + ' vol=' + (el ? el.volume.toFixed(2) : 'null'); Sound.setMuted(true); return r;"
+ }
+]

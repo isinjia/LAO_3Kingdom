@@ -1,0 +1,8 @@
+[
+ {"goto": "/index.html", "wait": 2000},
+ {"eval": "const t0=Date.now(); while (Date.now()-t0 < 90000 && !(document.readyState==='complete' && !document.getElementById('boot') && typeof newGame!=='undefined' && typeof UI!=='undefined' && typeof EQUIP!=='undefined')) await new Promise(r=>setTimeout(r,250)); return 'ready ' + innerWidth + 'x' + innerHeight;"},
+ {"eval": "localStorage.setItem('lao3k_tut','1'); newGame('3P_Labiata',{}); UI.sel=P().city; UI.show('main'); UI.render(); await new Promise(r=>setTimeout(r,2500)); if (document.fonts) await document.fonts.ready; await new Promise(r=>setTimeout(r,300)); const over=[...document.querySelectorAll('header *, #side *')].filter(e=>e.scrollWidth>e.clientWidth+2 && getComputedStyle(e).overflowX==='visible' && e.clientWidth>0).length; const hdr=document.querySelector('header'); return 'main hdrOverflow=' + (hdr ? hdr.scrollWidth>hdr.clientWidth+2 : '?') + ' docScroll=' + (document.documentElement.scrollWidth>innerWidth) + ' overflowEls=' + over + ' ' + [...document.querySelectorAll('header *, #side *')].filter(e=>e.scrollWidth>e.clientWidth+2 && getComputedStyle(e).overflowX==='visible' && e.clientWidth>0).map(e=>e.tagName+'.'+e.className+'#'+e.id+'('+e.scrollWidth+'>'+e.clientWidth+')').join(',');"},
+ {"shot": "res_main"},
+ {"eval": "UI.chronicle(); await new Promise(r=>setTimeout(r,600)); const m=document.querySelector('.modalBg > *'); const r=m?m.getBoundingClientRect():null; return 'modal ' + (r ? Math.round(r.top)+','+Math.round(r.bottom)+' / '+innerHeight : 'none');"},
+ {"shot": "res_modal"}
+]

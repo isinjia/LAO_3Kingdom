@@ -1,0 +1,12 @@
+# 대용량 변환 원본·작업 산출물 (저장소에 넣지 않는다)
+tools/sd/unity_ref/
+tools/sd/*.log
+tools/.mix/
+tools/.fsim.txt
+tools/.norm_done
+tools/.sfxpeak_done
+shots/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
