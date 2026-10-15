@@ -844,19 +844,6 @@ const UI = {
     });
   },
 
-  // 전투 방식 고르기 (마지막 선택을 기억)
-  battleMode(title, text) {
-    let last = "field"; try { last = localStorage.getItem("lao3k_bmode") || "field"; } catch (er) {}
-    Sound.sfx("open", 0.5);
-    return new Promise((res) => {
-      const pick = (k) => { try { localStorage.setItem("lao3k_bmode", k); } catch (er) {} m.remove(); Sound.sfx("click", 0.5); res(k); };
-      const M = [["field", "charge", "야전", "실시간 군영전 — 병사 무리가 맞부딪히고, 무장기·진형·전군 명령으로 싸운다"], ["formation", "attack", "진형 전투", "턴마다 부대별 명령을 내리는 지휘 전투 (기존 방식)"], ["auto", "auto", "자동 전투", "결과만 바로 본다"]];
-      const m = this.modal([h("div", { class: "msgHead" }, face(P(), 84, "lg"), h("h3", null, "전투")), h("p", { class: "msgText" }, `${title}\n\n${text}`),
-        h("div", { class: "battleModes" }, M.map(([k, ic, n, d]) => h("button", { class: (k === last ? "rec" : ""), onclick: () => pick(k) }, icon(ic, 28), h("b", null, n), h("small", null, d))))], "msg");
-      setTimeout(() => { const b = m.querySelector(".battleModes .rec"); if (b) b.focus(); }, 30);
-    });
-  },
-
   async battleEntry(e) {
     const w = e.war;
     const to = C(w.to);
@@ -867,18 +854,17 @@ const UI = {
     const theirs = e.playerSide === "atk" ? e.war.def : e.war.atk;
     const sum = (l) => fmt(l.reduce((s, x) => s + x.troops, 0));
     Sound.sfx("warn", 0.6);
-    // 기본은 야전(실시간 군영전). 출진 화면에서 진형 전투(턴제) · 자동 전투로 바꿀 수 있다
+    // 전투는 야전(실시간 군영전)으로만 치른다. 출진 화면에서 자동 전투로 바꿀 수 있다
     if (typeof Field !== "undefined" && Stage.ok) {
       // 야전 시작 중 예외가 나면 멈추지 않고 자동 전투로 넘긴다
       const r = await new Promise((res) => { try { Promise.resolve(Field.start(e, res)).catch((er) => { console.error(er); try { FUI.close(); } catch (x) {} res("auto"); }); } catch (er) { console.error(er); res("auto"); } });
-      if (r === "formation") await new Promise((res) => Battle.start(e, res));
-      else if (r === "auto") await this.autoBattle(e);
+      if (r === "auto") await this.autoBattle(e);
       this.mapBgm();
       return;
     }
-    const mode = await this.battleMode(`${af.name} ▶ ${w.to}${df ? ` (${df.name})` : " (공백지)"}`, `아군 ${mine.length}부대 · ${sum(mine)}명\n적군 ${theirs.length}부대 · ${sum(theirs)}명${e.war.militia && e.playerSide === "atk" ? ` + 수비병 ${fmt(e.war.militia)}` : ""}\n\n${e.commander ? "총대장으로서 전군을 지휘한다." : "자신의 부대만 지휘한다."}`);
-    if (mode === "auto") return this.autoBattle(e);
-    await new Promise((res) => Battle.start(e, res));
+    // WebGL을 쓸 수 없으면 야전을 그릴 수 없으므로 자동 전투로 처리한다
+    this.toast("이 브라우저에서는 야전을 표시할 수 없어 자동 전투로 진행합니다", "bad");
+    await this.autoBattle(e);
     this.mapBgm();
   },
   async autoBattle(e) {

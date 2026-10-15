@@ -91,7 +91,12 @@ const Field = {
       const kind = Math.random() < 0.55 ? "forest" : "river", wdt = kind === "forest" ? 2.6 : 1.5;
       for (let tries = 0; tries < 10; tries++) {
         const cx = (Math.random() - 0.5) * 12;
-        if (this.terrain.every((t) => cx + wdt / 2 < t.x0 - 1 || cx - wdt / 2 > t.x1 + 1)) { this.terrain.push({ kind, x0: cx - wdt / 2, x1: cx + wdt / 2 }); break; }
+        // 숲은 전장 세로의 45~65%만 덮는 조각(위 또는 아래) — 돌아서 지나갈 수 있다. 강은 전장을 가로지른다
+        if (this.terrain.every((t) => cx + wdt / 2 < t.x0 - 1 || cx - wdt / 2 > t.x1 + 1)) {
+          const H = FLD.Y1 - FLD.Y0, part = kind === "forest" ? 0.45 + Math.random() * 0.2 : 1, top = Math.random() < 0.5;
+          const y0 = kind === "forest" ? (top ? FLD.Y1 - H * part : FLD.Y0) : FLD.Y0, y1 = kind === "forest" ? (top ? FLD.Y1 : FLD.Y0 + H * part) : FLD.Y1;
+          this.terrain.push({ kind, x0: cx - wdt / 2, x1: cx + wdt / 2, y0, y1 }); break;
+        }
       }
     }
     const bonus = { atk: squadBonus(atk.map((b) => b.u)), def: squadBonus(def.map((b) => b.u)) };
@@ -120,7 +125,7 @@ const Field = {
     this.title = `${af.name} ▶ ${w.to}`; this.sub = df ? `수비: ${df.name}` : "공백지 공략";
     const foeSide = this.mySide === "atk" ? "def" : "atk";
     const foeForm = this.aiForm(foeSide), scouted = Math.random() < this.scoutChance();
-    // 출진 화면: 진형 선택 (또는 진형 전투 · 자동 전투로 전환)
+    // 출진 화면: 진형 선택 (또는 자동 전투로 전환)
     const pick = await FUI.prep(this, foeForm, scouted);
     if (pick === "auto" || pick === "formation") return onDone(pick);
     this.form = { [this.mySide]: pick, [foeSide]: foeForm };
@@ -244,9 +249,10 @@ const Field = {
   // 성 방어 지원: 거점 방어도는 성벽 밖의 수비 부대에도 보급·지원으로 작용한다 (받는 피해 -방어도/2500, 최대 -25%) — 자동 전투의 성 방어 보정과 맞춘다
   cityK(side) { return side === "def" ? 1 - Math.min(0.25, (this.w.cityDef || 0) / 2500) : 1; },
   // 성 방어는 한 번만: 성벽 안이면 성벽 보정, 밖이면 성 방어 지원 (겹치지 않는다)
-  wallMul(o, side) { return (this.inWall(o, side) ? 1 - this.wallK() : this.cityK(side)) * (this.terrAt(o.x) === "forest" ? 0.85 : 1); },
-  terrAt(x) { const t = this.terrain && this.terrain.find((r) => x >= r.x0 && x <= r.x1); return t ? t.kind : null; },
-  terrSpd(x) { const k = this.terrAt(x); return k === "forest" ? 0.75 : k === "river" ? 0.6 : 1; },
+  wallMul(o, side) { return (this.inWall(o, side) ? 1 - this.wallK() : this.cityK(side)) * (this.terrAt(o.x, o.y) === "forest" ? 0.85 : 1); },
+  inZone(r, x, y) { return x >= r.x0 && x <= r.x1 && (y == null || r.y0 == null || (y >= r.y0 - 0.1 && y <= r.y1 + 0.1)); },
+  terrAt(x, y) { const t = this.terrain && this.terrain.find((r) => this.inZone(r, x, y)); return t ? t.kind : null; },
+  terrSpd(x, y) { const k = this.terrAt(x, y); return k === "forest" ? 0.75 : k === "river" ? 0.6 : 1; },
   isLead(g) { return this.units[g.side][0] === g.b; },
   homeX(g) { return g.side === "atk" ? FLD.X0 + 1.2 : FLD.X1 - 1.2; },
 
@@ -370,7 +376,7 @@ const Field = {
   },
   moveToward(o, x, y, step) {
     const dx = x - o.x, dy = y - o.y, L = Math.hypot(dx, dy); if (L < 0.02) return;
-    if (!o.flee) step *= this.terrSpd(o.x); // 숲·강에서는 느려진다
+    if (!o.flee) step *= this.terrSpd(o.x, o.y); // 숲·강에서는 느려진다
     o.x += (dx / L) * Math.min(step, L); o.y += (dy / L) * Math.min(step, L) * 0.7;
     o.x = Math.max(FLD.X0, Math.min(FLD.X1, o.x)); o.y = Math.max(FLD.Y0, Math.min(FLD.Y1, o.y));
     if (o.spr) { o.spr.x = o.x; o.spr.y = o.y; o.spr.h = 0.95 * this.depth(o.y); if (Math.abs(dx) > 0.05) o.spr.face = dx > 0 ? 1 : -1; }
@@ -403,7 +409,7 @@ const Field = {
     if (g.form.shape === "arrow") { const f = isGen ? g : who; if (f.first || this.t - (f.lastHitT || 0) > 4) { v *= 2; f.first = false; } f.lastHitT = this.t; if (tg.form.shape === "ring") v *= 1.2; } // 화살촉은 고리 진형을 꿰뚫는다
     // 학익진: 옆에서 치면(세로 차이가 가로 차이보다 크면) 측면 공격 +25%
     if (g.form.shape === "wings" && tg.form.shape !== "snake" && Math.abs(tgt.y - who.y) * 1.6 > Math.abs(tgt.x - who.x) * 0.8) v *= 1.25; // 장사진은 측면이 없다
-    if (this.terrAt(who.x) === "river") v *= 0.9; // 강을 건너며 싸우면 힘이 빠진다
+    if (this.terrAt(who.x, who.y) === "river") v *= 0.9; // 강을 건너며 싸우면 힘이 빠진다
     v *= 0.85 + Math.random() * 0.3;
     const fx = FUI.stage;
     if (fx) {
@@ -540,7 +546,7 @@ const Field = {
         // 적이 가장 많이 든 숲·강 띠를 고른다 (14 안). 없으면 수동일 때만 가까운 적 무리에 불화살
         let best = null, bc = 0;
         for (const t of this.terrain || []) {
-          const c = foes.filter((f) => f.x >= t.x0 && f.x <= t.x1 && Math.abs(f.x - g.x) < 14).length;
+          const c = foes.filter((f) => this.inZone(t, f.x, f.y) && Math.abs(f.x - g.x) < 14).length;
           if (c > bc) { bc = c; best = t; }
         }
         if (best && bc >= need(4)) return { band: best, n: bc };
@@ -650,12 +656,12 @@ const Field = {
       }
       case "plot": {
         const t = tg.band;
-        const inBand = () => this.enemies(g.side).filter((f) => f.x >= t.x0 && f.x <= t.x1);
+        const inBand = () => this.enemies(g.side).filter((f) => this.inZone(t, f.x, f.y));
         if (t && t.kind === "forest") {
           // 화계: 숲 전체가 4초간 불탄다 (1초마다 피해)
           this.say(`${g.b.name}의 계략 「화계」 — 숲이 불길에 휩싸인다!`, g.side === this.mySide ? "hot" : "war");
           for (let k = 0; k < 4; k++) this.later(0.1 + k, () => {
-            if (fx) for (let i = 0; i < 4; i++) fx.burst(t.x0 + Math.random() * (t.x1 - t.x0), FLD.Y0 + Math.random() * (FLD.Y1 - FLD.Y0) + 0.4, 0xff7a2a, 1.3, 0.5);
+            if (fx) for (let i = 0; i < 4; i++) fx.burst(t.x0 + Math.random() * (t.x1 - t.x0), t.y0 + Math.random() * (t.y1 - t.y0) + 0.4, 0xff7a2a, 1.3, 0.5);
             for (const f of inBand()) this.hurt(g, f, 700 * p, 70 * p, { ctx });
             Sound.sfx("boom", 0.5);
           });
@@ -1006,7 +1012,8 @@ const Field = {
     for (const g of this.groups) {
       const w = g.side === winSide, c = (f) => g.soldiers.filter(f).length;
       const keep = c((s) => s.alive) + c((s) => s.wd), dead = c((s) => !s.alive && !s.gone && !s.wd), gone = c((s) => s.gone);
-      g.b.troops = Math.round((keep + dead * (w ? 0.5 : 0.3) + gone * (w ? 0.6 : 0.3)) * g.per);
+      // 탈주병은 죽은 게 아니라 흩어진 것 — 진 쪽도 절반은 다시 모인다 (패주가 시체가 아니라 생존자를 남긴다)
+      g.b.troops = Math.round((keep + dead * (w ? 0.5 : 0.3) + gone * (w ? 0.7 : 0.5)) * g.per);
       g.b.kills = g.kills;
     }
     const sum = (arr) => arr.reduce((s, b) => s + b.troops, 0);
@@ -1235,13 +1242,13 @@ const FUI = {
     this.$camps.forEach((c, i) => { const p = this.stage.toScreen(i ? FLD.X1 - 1.2 : FLD.X0 + 1.2, FLD.Y1 + 0.2); c.style.transform = `translate(${Math.round(p.x)}px, ${Math.round(p.y)}px)`; });
     // 지형 띠(숲·강)와 성벽 지대: 월드 좌표에 맞춰 지면 위에 깐다
     if (!this.$zones) {
-      const zs = (F_.terrain || []).map((t) => ({ x0: t.x0, x1: t.x1, el: h("div", { class: "fZone " + t.kind }, h("span", null, t.kind === "forest" ? "숲 · 이동 -25% · 받는 피해 -15%" : "강 · 이동 -40% · 주는 피해 -10%")) }));
+      const zs = (F_.terrain || []).map((t) => ({ x0: t.x0, x1: t.x1, y0: t.y0, y1: t.y1, el: h("div", { class: "fZone " + t.kind }, h("span", null, t.kind === "forest" ? "숲 · 이동 -25% · 받는 피해 -15%" : "강 · 이동 -40% · 주는 피해 -10%")) }));
       if (F_.wallK() > 0) zs.push({ x0: FLD.X1 - FLD.WALL_W, x1: FLD.X1, el: h("div", { class: "fZone wall" }, h("span", null, `성벽 · 수비측 받는 피해 -${Math.round(F_.wallK() * 100)}%`)) });
       const layer = this.$stage.querySelector(".fZones"); for (const z of zs) layer.append(z.el);
       this.$zones = zs;
     }
     for (const z of this.$zones) {
-      const a = this.stage.toScreen(z.x0, FLD.Y1 + 0.35), b = this.stage.toScreen(z.x1, FLD.Y0 - 0.25);
+      const a = this.stage.toScreen(z.x0, (z.y1 != null ? z.y1 : FLD.Y1) + 0.35), b = this.stage.toScreen(z.x1, (z.y0 != null ? z.y0 : FLD.Y0) - 0.25);
       z.el.style.cssText = `left:${Math.round(a.x)}px;top:${Math.round(a.y)}px;width:${Math.max(0, Math.round(b.x - a.x))}px;height:${Math.round(b.y - a.y)}px`;
     }
     this.hud(F_);
@@ -1264,7 +1271,7 @@ const FUI = {
     const mx = (x) => ((x - FLD.X0) / (FLD.X1 - FLD.X0)) * W, my = (y) => ((FLD.Y1 - y) / (FLD.Y1 - FLD.Y0)) * (H - 8) + 4;
     g2.clearRect(0, 0, W, H); g2.fillStyle = "#0d1016cc"; g2.fillRect(0, 0, W, H);
     g2.fillStyle = "#3d7bd833"; g2.fillRect(0, 0, mx(FLD.X0 + 2.4), H); g2.fillStyle = "#d84a3d33"; g2.fillRect(mx(FLD.X1 - 2.4), 0, W, H);
-    for (const t of F_.terrain || []) { g2.fillStyle = t.kind === "forest" ? "#3f8a4a55" : "#3d7bd855"; g2.fillRect(mx(t.x0), 0, mx(t.x1) - mx(t.x0), H); }
+    for (const t of F_.terrain || []) { g2.fillStyle = t.kind === "forest" ? "#3f8a4a55" : "#3d7bd855"; const top = my(t.y1 != null ? t.y1 : FLD.Y1), bot = my(t.y0 != null ? t.y0 : FLD.Y0); g2.fillRect(mx(t.x0), top, mx(t.x1) - mx(t.x0), bot - top); }
     if (F_.wallK() > 0) { g2.fillStyle = "#b9a27a66"; g2.fillRect(mx(FLD.X1 - FLD.WALL_W), 0, 2, H); }
     for (const g of F_.groups) {
       if (g.b.out) continue;
@@ -1384,7 +1391,7 @@ const FUI = {
             fixed && k === fixed ? h("em", null, "총대장 명령") : !fixed && k === rec ? h("em", null, scouted ? "상성 우위" : "추천") : edge === "lose" ? h("em", { class: "bad" }, "상성 열세") : null);
         })),
         h("div", { class: "prepFoot" }, h("small", { class: "muted" }, "전투 중: Q 돌격 · W 대기 · E 후퇴 · R 장수 돌격 · T 병사 돌격 · Z/X/C/B 무장기 · V 진형 · 우클릭 집결 · H 조작법"),
-          h("div", { class: "btns" }, h("button", { class: "ghost", title: "턴마다 부대별 명령을 내리는 기존 방식", onclick: () => done("formation") }, "진형 전투(턴제)로"), h("button", { class: "ghost", onclick: () => done("auto") }, "자동 전투")))], "msg prep");
+          h("div", { class: "btns" }, h("button",{ class: "ghost", onclick: () => done("auto") }, "자동 전투")))], "msg prep");
       setTimeout(() => { const b = m.querySelector(".formCard.rec"); if (b) b.focus(); }, 30);
     });
   },
