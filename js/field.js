@@ -7,7 +7,7 @@
 //   승패: 적 총대장 격파 · 적 전멸 · 적 총붕괴 후 퇴각 / 제한 시간이 지나면 남은 전력 비교(공격측은 1.4배 필요)
 "use strict";
 
-const FLD = { X0: -19, X1: 19, Y0: -5.4, Y1: 0.6, TIME: 150, SURGE: 60, SURGE_K: 1.15, START: 7.5, FORM_CD: 40, EDGE_UP: 1.15, EDGE_DN: 0.91, SOLDIER_HP: 2800, GEN_VS_SOLDIER: 2.3, ALONE_DECAY: 1.5, SK_SOLDIER: 2.2, WALL_W: 3.6, PER: 120, COLLAPSE_T: 8 };
+const FLD = { X0: -19, X1: 19, Y0: -5.4, Y1: 0.6, TIME: 150, SURGE: 60, SURGE_K: 1.15, START: 7.5, FORM_CD: 40, EDGE_UP: 1.15, EDGE_DN: 0.91, SOLDIER_HP: 3600, GEN_VS_SOLDIER: 2.3, ALONE_DECAY: 1.5, SK_SOLDIER: 2.2, WALL_W: 3.6, PER: 120, COLLAPSE_T: 8 };
 const fmtN = (n) => Math.round(n).toLocaleString();
 // 진영색: 같은 병사 리그를 쓰는 양군을 구분한다 (공격 = 푸른빛, 수비 = 붉은빛)
 const FLD_TEAM = { atk: [0.9, 1.0, 1.25], def: [1.2, 0.92, 0.88] }; // (색은 옅게 — 진영은 발판 원반이 가른다, 병사 그림이 탁해지지 않게)
@@ -220,13 +220,13 @@ const Field = {
         const mpMax = b.generic ? 0 : Math.round(80 + (b.st.int || 40) * 0.7);
         // 성벽 위 수비병은 대기로 시작한다 (플레이어 쪽도 — 명령을 내리기 전까지 성벽을 지킨다)
         const onWall = b.generic && side === "def" && this.wallK() > 0;
-        const g = { b, side, dir, x: gx, y: gy, fk, form, S, cmd: onWall ? "hold" : "charge", rally: { x: gx, y: gy }, mp: b.generic ? 0 : Math.round(mpMax * 0.15), mpMax, cool: 0, buff: 0, guard: 0, stun: 0, kills: 0, skK: 0, first: true,
+        const g = { b, side, dir, x: gx, y: gy, fk, form, S, cmd: onWall ? "hold" : "charge", rally: { x: gx, y: gy }, mp: b.generic ? 0 : Math.round(mpMax * 0.35), mpMax, cool: 0, buff: 0, guard: 0, stun: 0, kills: 0, skK: 0, first: true,
           mor: (b.generic ? 60 : Math.min(90, 64 + (b.st.cha || 40) / 8)) + 0 /* (공격측 시작 사기 보정 없음 — 거울전 공정성) */, lossT: -9, aiSk: 1 + Math.random(), hpStage: 0,
           // 총대장(각 진영 첫 장수)은 체력 1.4배 — 전투가 총대장 한 명의 기습으로만 끝나지 않게
           hpMax: b.generic ? 0 : Math.round((1100 + b.st.war * 16 + b.st.ldr * 8) * (i === 0 ? 1.4 : 1)), soldiers: [], skills: this.skillsOf(b) };
         g.hp = g.hpMax; g.sq = FLD_SQUAD[side][i % FLD_SQUAD[side].length]; g.laneY = gy; // 출진한 줄 — 부대는 이 줄을 크게 벗어나지 않는다
         // 장수 키: 군주 1.5 · 장수 1.35 · 철충(기계형)은 0.85배 — 큰 기체가 주변 부대를 다 가리지 않게
-        g.vh = (b.lord ? 1.8 : 1.6) * (b.u && b.u.iron ? 0.8 : String(b.code).startsWith("AGS_") ? 0.8 : 1); // 장수는 병사(0.95)보다 확실히 크게
+        g.vh = (b.lord ? 2.2 : 2.0) * (b.u && b.u.iron ? 0.85 : String(b.code).startsWith("AGS_") ? 0.9 : 1); // 장수는 병사(0.95)의 두 배 남짓 // 장수는 병사(0.95)보다 확실히 크게
         if (!b.generic && st) g.actor = st.add(b.code, gx, gy, g.vh, dir, { z: 0 });
         // 병사 수: 병력 120명당 1명 (5~36명) — 군영전다운 무리
         const cnt = Math.max(5, Math.min(36, Math.round(b.troops / FLD.PER)));
@@ -264,7 +264,7 @@ const Field = {
   // 성벽: 거점 방어도가 있으면 수비측 끝 WALL_W 안이 성벽 지대. 그 안의 수비 부대는 받는 피해가 줄어든다
   wallK() { const d = this.w.cityDef || 0; return d > 0 ? Math.min(0.25, 0.06 + d / 8000) : 0; },
   inWall(o, side) { return side === "def" && this.wallK() > 0 && o.x >= FLD.X1 - FLD.WALL_W; },
-  // 성 방어 지원: 거점 방어도는 성벽 밖의 수비 부대에도 보급·지원으로 작용한다 (받는 피해 -방어도/2500, 최대 -25%) — 자동 전투의 성 방어 보정과 맞춘다
+  // 성 방어 지원: 거점 방어도는 성벽 밖의 수비 부대에도 보급·지원으로 작용한다 (받는 피해 -방어도/8000, 최대 -6%) — 자동 전투의 성 방어 보정과 맞춘다
   cityK(side) { return side === "def" ? 1 - Math.min(0.06, (this.w.cityDef || 0) / 8000) : 1; },
   // 성 방어는 한 번만: 성벽 안이면 성벽 보정, 밖이면 성 방어 지원 (겹치지 않는다)
   wallMul(o, side) { return (this.inWall(o, side) ? 1 - this.wallK() : this.cityK(side)) * (this.terrAt(o.x, o.y) === "forest" ? 0.85 : 1); },
@@ -495,7 +495,7 @@ const Field = {
       if (!isGen && who.spr) { fx.spriteAnim(who.spr, "atk", true); who.spr.face = tgt.x > who.x ? 1 : -1; }
       // 사격: 짧은 탄이 날아가 박힌다 (병사 탄은 일부만 그려 화면을 덮지 않게) · 근접: 발밑 흙먼지와 작은 불꽃
       const col = g.side === "atk" ? 0x9fd6ff : 0xffb38a;
-      if (!S.melee && Math.random() < (isGen ? 1 : 0.22)) { const big = isGen || S.rng > 4; fx.bolt(who.x, who.y + (isGen ? 0.8 : 0.4), tgt.x, tgt.y + (tgt.gen ? 0.8 : 0.4), big ? 0xffe0a0 : col, Math.min(0.3, 0.06 + this.d(who, tgt) * 0.025), big ? 0.8 : 0.45, big ? 0.08 : 0.045); }
+      if (!S.melee && Math.random() < (isGen ? 1 : 0.22)) { const big = isGen || S.rng > 4; fx.bolt(who.x, who.y + (isGen ? 0.8 : 0.4), tgt.x, tgt.y + (tgt.gen ? 0.8 : 0.4), big ? 0xfff2c0 : (g.side === "atk" ? 0xd8f0ff : 0xffd8c0), Math.min(0.22, 0.05 + this.d(who, tgt) * 0.02), big ? 0.6 : 0.32, big ? 0.07 : 0.035); /* 밝고 짧은 탄 */ }
       if (!S.melee && S.rng > 4 && !isGen && Math.random() < 0.3) this.later(0.12, () => FUI.stage && (FUI.stage.dust(tgt.x, tgt.y, 0.7), FUI.stage.burst(tgt.x, tgt.y + 0.3, 0xffb060, 0.5, 0.2)));
       if (S.melee && Math.random() < (isGen ? 0.8 : 0.25)) { fx.burst((who.x + tgt.x) / 2, (who.y + tgt.y) / 2 + 0.5, isGen ? 0xffe28a : 0xffffff, isGen ? 0.7 : 0.35, 0.16); fx.dust(tgt.x, tgt.y, isGen ? 0.8 : 0.45); }
       if (!isGen && Math.random() < 0.06) Sound.sfx(S.melee ? "swing" : S.rng > 4 ? "boom" : "shot", 0.35);
@@ -523,7 +523,7 @@ const Field = {
   killSoldier(s, by) {
     if (!s.alive) return;
     s.alive = false; s.hp = 0;
-    const vg = s.g; vg.mor = Math.max(0, vg.mor - (65 / vg.n0) * (vg.form.steady || 1)); vg.lossT = this.t;
+    const vg = s.g; vg.mor = Math.max(0, vg.mor - (50 / vg.n0) * (vg.form.steady || 1)); vg.lossT = this.t;
     if (s.spr) { s.spr.dying = 2.5; s.spr.corpse = true; s.spr.tint = 0.6; } // 쓰러진 병사는 2.5초 동안 회색으로 옅게 남는다 (살아 있는 병사와 헷갈리지 않게)
     if (by) { by.kills++; by.mor = Math.min(100, by.mor + 0.3); }
     if (Math.random() < 0.25) Sound.sfx("hit", 0.35);
@@ -709,7 +709,7 @@ const Field = {
     // (병사 한 명이 120명 — 230명이던 때의 6/10/18명과 같은 병력)
     // 처치 상한은 적 남은 병사의 일정 비율(대무장기 12% · 원작·계략 8% · 병종 6%, 최소 4명)과 고정 상한 중 작은 쪽
     const foeLeft = this.groups.reduce((a, o) => a + (o.side !== g.side && !o.b.out ? o.soldiers.filter((s) => s.alive).length : 0), 0);
-    const capBase = Math.min(sk.id === "storm" ? 34 : sk.big || sk.id === "plot" ? 19 : 11, Math.max(4, Math.round(foeLeft * (sk.id === "storm" ? 0.18 : sk.big || sk.id === "plot" ? 0.12 : 0.06))));
+    const capBase = Math.min(sk.id === "storm" ? 34 : sk.big || sk.id === "plot" ? 19 : 11, Math.max(4, Math.round(foeLeft * (sk.id === "storm" ? 0.18 : sk.big || sk.id === "plot" ? 0.12 : 0.1))));
     // 탄막·돌진은 길목에 든 적 수만큼은 쓰러뜨릴 수 있다 (한 줄을 쓸어내는 기술이 1명만 쓰러뜨리는 일이 없게)
     const ctx = { k: 0, cap: (sk.kind === "line" || sk.kind === "dash") && tg.n ? Math.max(capBase, Math.min(tg.n, 14)) : capBase, big: !!sk.big }; // big: 대무장기·원작 스킬은 병사 피해 ×1.8 (맞은 한가운데 병사는 한 번에 쓰러진다)
     switch (sk.kind) {
@@ -1415,7 +1415,10 @@ const FUI = {
     // 앞에 적 전열이 가까우면(8 안) 두 전열의 가운데를 본다
     let foeFront = null; for (const o of F_.alive(F_.mySide === "atk" ? "def" : "atk")) for (const s of o.soldiers) if (s.alive && (s.x - front) * dir > -2 && (s.x - front) * dir < 8) foeFront = foeFront == null ? s.x : dir > 0 ? Math.min(foeFront, s.x) : Math.max(foeFront, s.x);
     let fight = foeFront == null ? front : (front + foeFront) / 2;
-    if (F_.hotX != null && F_.t - F_.hotT < 2) fight = fight * 0.4 + F_.hotX * 0.6; // 실제로 싸움이 벌어지는 곳
+    if (F_.hotX != null && F_.t - F_.hotT < 4) fight = fight * 0.4 + F_.hotX * 0.6; // 실제로 싸움이 벌어지는 곳
+    // 아군 총대장 곁(4 안)에 적장이 붙어 있으면 그쪽이 지금 가장 중요한 싸움이다
+    const myL = F_.alive(F_.mySide).find((o) => F_.isLead(o) && !o.b.generic && o.hp > 0);
+    if (myL && F_.groups.some((o) => o.side !== F_.mySide && !o.b.out && !o.b.generic && o.hp > 0 && Math.abs(o.x - myL.x) < 4)) fight = fight * 0.4 + myL.x * 0.6;
     const base = g ? g.x * 0.2 + fight * 0.8 : fight;
     // 앞쪽(적 쪽)을 조금 더 보여 다가오는 적이 보이게 한다. 단, 선택한 장수가 화면 밖으로 밀려나지 않게
     let t = base + dir * 1.5;
@@ -1717,7 +1720,8 @@ const FUI = {
     const q = this.floatAt(Math.max(70, Math.min(W - 70, p.x)), Math.max(40, p.y), 1800) || { x: Math.max(70, Math.min(W - 70, p.x)), y: Math.max(40, p.y) }, x = q.x, y = q.y;
     if (fl.querySelectorAll(".fBubble").length >= 2) fl.querySelector(".fBubble").remove(); // 말풍선은 동시에 둘까지
     const el = h("div", { class: "fBubble " + (cls || ""), style: `left:${x}px;top:${y}px` }, off < 0 ? "◀ " : "", `${g.b.name} ${text}`, off > 0 ? " ▶" : "");
-    fl.append(el); setTimeout(() => el.remove(), 2500);
+    fl.append(el); { const w = el.offsetWidth || 180, W2 = this.stage.w; const cx = Math.max(w / 2 + 6, Math.min(W2 - w / 2 - 6, x)); el.style.left = `${cx}px`; } // (가운데 정렬 상자라 실제 폭의 절반만큼 가장자리에서 띄운다)
+    setTimeout(() => el.remove(), 2500);
   },
   onScreen(x) { if (!this.stage) return false; const c = this.stage.camera; return x > c.left - 0.5 && x < c.right + 0.5; },
   // 흔들림은 전장 그림만 (상단 정보·명령 버튼은 흔들리지 않게)
@@ -1747,7 +1751,7 @@ const FUI = {
     const tick = () => { if (m.isConnected) return setTimeout(tick, 150); if (F_.paused && !F_.finished) this.togglePause(F_); };
     setTimeout(tick, 150);
   },
-  firstHelp() { let seen = false; try { seen = !!localStorage.getItem("lao3k_fhelp2"); localStorage.setItem("lao3k_fhelp2", "1"); } catch (e) { seen = true; } if (!seen) setTimeout(() => this.toast("H: 조작법 · Q 돌격 · W 대기 · E 후퇴 · Z/X/C/B 무장기 · 우클릭 집결 · ←/→ 카메라"), 1200); },
+  firstHelp() { let seen = false; try { seen = !!localStorage.getItem("lao3k_fhelp2"); localStorage.setItem("lao3k_fhelp2", "1"); } catch (e) { seen = true; } if (!seen) setTimeout(() => this.toast("H: 조작법 · Q 돌격 · W 대기 · E 후퇴 · Z/X/C/B 무장기 · 우클릭 집결 · ←/→ 카메라"), 2600); }, // (개전 배너가 사라진 뒤)
 
   // ── 출진 화면: 정찰 보고 · 진형 선택 · 양군 편성 ──
   prep(F_, foeForm, scouted) {
