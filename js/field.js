@@ -455,8 +455,8 @@ const Field = {
     if (!o.flee) step *= this.terrSpd(o.x, o.y); // 숲·강에서는 느려진다
     o.x += (dx / L) * Math.min(step, L); o.y += (dy / L) * Math.min(step, L) * 0.7;
     o.x = Math.max(FLD.X0, Math.min(FLD.X1, o.x)); o.y = Math.max(FLD.Y0, Math.min(FLD.Y1, o.y));
-    if (o.spr) { o.spr.x = o.x; o.spr.y = o.y; o.spr.h = 0.95 * this.depth(o.y); if (Math.abs(dx) > 0.05) o.spr.face = dx > 0 ? 1 : -1; }
-    if (o.actor && Math.abs(dx) > 0.05 && FUI.stage) FUI.stage.setFace(o.actor, dx > 0 ? 1 : -1);
+    if (o.spr) { o.spr.x = o.x; o.spr.y = o.y; o.spr.h = 0.95 * this.depth(o.y); if (Math.abs(dx) > 0.3) o.spr.face = dx > 0 ? 1 : -1; /* 자리 보정 같은 작은 움직임으로는 돌아서지 않는다 (좌우로 깜빡이던 것) */ }
+    if (o.actor && Math.abs(dx) > 0.3 && FUI.stage) FUI.stage.setFace(o.actor, dx > 0 ? 1 : -1);
   },
   // idle 표시를 남겨 두면 공격 동작이 끝난 뒤 제자리 걸음이 아니라 대기 자세로 돌아간다
   anim(s, name) { if (!s.spr || !FUI.stage) return; s.spr.idle = name === "idle"; if (s.spr.anim !== "atk") FUI.stage.spriteAnim(s.spr, name); },
@@ -491,7 +491,7 @@ const Field = {
     v *= 0.85 + Math.random() * 0.3;
     const fx = FUI.stage;
     if (fx) {
-      if (isGen && g.actor) { fx.play(g.actor, "atk"); if (S.melee) fx.lunge(g.actor, (tgt.x - g.x) * 0.4, 0.35); if (Math.random() < 0.5 && !Sound.charSfx(a.code, "s1")) Sound.sfx(S.melee ? "swing" : "shot", 0.5); }
+      if (isGen && g.actor) { const c = g.actor.sd; if (!c || (c.clipName !== "atk" && c.clipName !== "skill") || (c.clip && c.time > c.clip.dur * 0.75)) fx.play(g.actor, "atk"); /* 공격 동작이 거의 끝났을 때만 다시 (끊김 방지) */ if (S.melee) fx.lunge(g.actor, (tgt.x - g.x) * 0.4, 0.35); if (Math.random() < 0.5 && !Sound.charSfx(a.code, "s1")) Sound.sfx(S.melee ? "swing" : "shot", 0.5); }
       if (!isGen && who.spr) { fx.spriteAnim(who.spr, "atk", true); who.spr.face = tgt.x > who.x ? 1 : -1; }
       // 사격: 짧은 탄이 날아가 박힌다 (병사 탄은 일부만 그려 화면을 덮지 않게) · 근접: 발밑 흙먼지와 작은 불꽃
       const col = g.side === "atk" ? 0x9fd6ff : 0xffb38a;
@@ -503,7 +503,7 @@ const Field = {
     if (tgt.gen) {
       const k = v * (isGen ? 0.9 : 0.4) * this.genK(tg) * this.wallMul(tg, tg.side);
       tg.hp = Math.max(0, tg.hp - k); this.genHit(tg, k);
-      if (tg.actor && fx && Math.random() < 0.3) { fx.play(tg.actor, "hit"); fx.knock(tg.actor, Math.sign(tg.x - who.x) || 1, 0.2); }
+      if (tg.actor && fx && Math.random() < 0.3 && this.t - (tg.hitAnimT || -9) > 1.2 && !(tg.actor.sd && (tg.actor.sd.clipName === "atk" || tg.actor.sd.clipName === "skill"))) { tg.hitAnimT = this.t; fx.play(tg.actor, "hit"); fx.knock(tg.actor, Math.sign(tg.x - who.x) || 1, 0.2); }
       if (isGen) { FUI.pop(this, tg.x, tg.y + 1.6, Math.round(k), "gen"); Sound.sfx("hit", 0.5); }
       if (tg.mpMax) tg.mp = Math.min(tg.mpMax, tg.mp + (isGen ? 1.5 : 0.3)); // 맞은 장수가 기력을 얻는다 (역전의 여지)
     } else {
@@ -1481,6 +1481,11 @@ const FUI = {
         // 이름 글자색 = 부대색(밝게): 라벨과 발판·고리 색으로 어느 부대인지 잇는다
         // 이름 글자는 진영색(아군 파랑·적 빨강), 부대색은 이름 앞 작은 점 — 적·아군을 먼저 가르고 부대는 그다음
         if (g.sq) el.style.setProperty("--sq", `rgb(${g.sq.map((v) => Math.min(255, Math.round(v * 0.5 * 255 + 40))).join(",")})`);
+      }
+      if (g.actor && g.actor.sd && !g.b.out) {
+        const c = g.actor.sd, mv = g._ax == null ? 0 : Math.hypot(g.x - g._ax, g.y - g._ay) / Math.max(0.001, real * (this.stage.timeScale || 0.0001));
+        g._ax = g.x; g._ay = g.y; g._mv = (g._mv || 0) * 0.7 + mv * 0.3;
+        if ((c.clipName === "idle" || c.clipName === "move") && this.stage.timeScale > 0) { const want = g._mv > 0.35 && c.has("move") ? "move" : "idle"; if (c.clipName !== want) c.play(want, null, true); }
       }
       // 발밑 고리: 부대색(아군은 푸른 계열 · 적은 붉은 계열) · 선택한 장수는 금색으로 맥동 (병사 무리 속에서도 장수가 어디 있는지 보이게)
       let rg = this.rings.get(g);

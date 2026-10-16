@@ -363,9 +363,11 @@ const Stage = (() => {
           sp.mat.opacity = sp.opacity; { const k = (sp.tint || 1) * (sp.hitT > 0 ? 2.2 : 1), c = sp.corpse && sp.dying != null ? [0.55, 0.55, 0.55] : sp.team; /* 시체는 진영색 없이 회색 */ if (c) sp.mat.color.setRGB(c[0] * k, c[1] * k, c[2] * k); else sp.mat.color.setScalar(k); }
           const w = sp.h * sp.frames.aspect;
           sp.mesh.scale.set(w * sp.face, sp.h, 1);
-          sp.mesh.position.set(sp.x + ox, sp.y + sp.h / 2 - sp.sink - (sp.launch ? 0 : fall * sp.h * 0.32) + oy, 0);
+          // 그리는 위치는 실제 위치를 부드럽게 따라간다 (밀어내기로 생기는 작은 떨림을 감춘다. 순간 이동처럼 크게 벌어지면 바로 맞춘다)
+          if (sp.rx == null || Math.abs(sp.x - sp.rx) > 1.5 || Math.abs(sp.y - sp.ry) > 1.5) { sp.rx = sp.x; sp.ry = sp.y; } else { const k = Math.min(1, dt * 14); sp.rx += (sp.x - sp.rx) * k; sp.ry += (sp.y - sp.ry) * k; }
+          sp.mesh.position.set(sp.rx + ox, sp.ry + sp.h / 2 - sp.sink - (sp.launch ? 0 : fall * sp.h * 0.32) + oy, 0);
           sp.mesh.renderOrder = sp.corpse ? 7 : 20 + Math.round(-sp.y * 10); // (시체는 살아 있는 병사 아래) // 유닛 20~80 · 바닥(그림자·발판·고리·먼지) 5~6 · 효과 299~301
-          if (sp.shadow) { if (sp.team && !sp.teamSet) { sp.teamSet = true; sp.shadow.material = teamMat(sp.teamDisc || sp.team); } sp.shadow.visible = sp.dying == null;sp.shadow.position.set(sp.x + ox, sp.y + 0.03, 0); sp.shadow.scale.set(sp.h * 0.26, sp.h * 0.07, 1); }
+          if (sp.shadow) { if (sp.team && !sp.teamSet) { sp.teamSet = true; sp.shadow.material = teamMat(sp.teamDisc || sp.team); } sp.shadow.visible = sp.dying == null;sp.shadow.position.set(sp.rx + ox, sp.ry + 0.03, 0); sp.shadow.scale.set(sp.h * 0.26, sp.h * 0.07, 1); }
           return true;
         });
       }
