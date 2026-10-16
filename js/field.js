@@ -7,10 +7,10 @@
 //   승패: 적 총대장 격파 · 적 전멸 · 적 총붕괴 후 퇴각 / 제한 시간이 지나면 남은 전력 비교(공격측은 1.4배 필요)
 "use strict";
 
-const FLD = { X0: -19, X1: 19, Y0: -5.4, Y1: 0.6, TIME: 240, SURGE: 60, SURGE_K: 1.3, START: 7.5, FORM_CD: 40, EDGE_UP: 1.15, EDGE_DN: 0.91, SOLDIER_HP: 4000, GEN_VS_SOLDIER: 1.6, ALONE_DECAY: 1.5, SK_SOLDIER: 3.2, WALL_W: 3.6, PER: 120, COLLAPSE_T: 10 };
+const FLD = { X0: -19, X1: 19, Y0: -5.4, Y1: 0.6, TIME: 240, SURGE: 60, SURGE_K: 1.15, START: 7.5, FORM_CD: 40, EDGE_UP: 1.15, EDGE_DN: 0.91, SOLDIER_HP: 4000, GEN_VS_SOLDIER: 2.3, ALONE_DECAY: 1.5, SK_SOLDIER: 3.2, WALL_W: 3.6, PER: 120, COLLAPSE_T: 10 };
 const fmtN = (n) => Math.round(n).toLocaleString();
 // 진영색: 같은 병사 리그를 쓰는 양군을 구분한다 (공격 = 푸른빛, 수비 = 붉은빛)
-const FLD_TEAM = { atk: [0.86, 1.0, 1.35], def: [1.3, 0.84, 0.76] };
+const FLD_TEAM = { atk: [0.9, 1.0, 1.25], def: [1.2, 0.92, 0.88] }; // (색은 옅게 — 진영은 발판 원반이 가른다, 병사 그림이 탁해지지 않게)
 // 진영 발판색 (병사 발밑 원반): 공격 = 파랑, 수비 = 빨강
 const FLD_DISC = { atk: [0.5, 1.1, 1.8], def: [1.8, 0.55, 0.45] };
 // 부대색: 같은 진영 안에서 장수마다 다른 빛깔 (발판·장수 고리) — 어느 병사가 어느 장수 부대인지 보인다
@@ -363,7 +363,7 @@ const Field = {
       // 무장기 (AI · 자동)
       if (g.mpMax && g.hp > 0 && this.t >= g.aiSk && (!this.ctrl(g.b) || this.autoSkill || (this.skillAssist && g !== this.sel))) { g.aiSk = this.t + 0.6; this.aiSkill(g); }
       // 보조 모드에서 선택한 장수: 기력이 가득 찬 채 15초가 지나면 알아서 쓴다 (기력이 넘쳐 버려지지 않게)
-      else if (g.mpMax && g.hp > 0 && this.skillAssist && !this.autoSkill && g === this.sel) { g.fullT = g.mp >= g.mpMax - 0.5 ? (g.fullT || 0) + dt : 0; if (g.fullT > 15 && this.t >= g.aiSk) { g.aiSk = this.t + 0.6; this.aiSkill(g); } }
+      else if (g.mpMax && g.hp > 0 && this.skillAssist && !this.autoSkill && g === this.sel) { g.fullT = g.mp >= g.mpMax - 0.5 ? (g.fullT || 0) + dt : 0; if (g.fullT > 5 && this.t >= g.aiSk) { g.aiSk = this.t + 0.6; this.aiSkill(g, true); } /* 대무장기는 직접 쓰도록 남긴다 */ }
       // 병사: 사거리 안의 적을 치고, 조금 앞(목줄 안)의 적에게는 한두 걸음 나서며, 아니면 진형 자리로 돌아간다
       const leash = g.S.melee ? 0.9 : 0.45; // 짧은 목줄: 맞붙어도 진형 모양이 남는다
       let engaged = 0;
@@ -425,7 +425,7 @@ const Field = {
     for (const f of foes) { const d = Math.abs(f.x - g.ux) + Math.abs(f.y - g.uy) * 2.2; if (d < bd) { bd = d; best = f; } }
     if (g.frontD == null) g.frontD = Math.max(0.3, ...g.soldiers.map((s) => s.home.x * g.dir));
     const stand = g.frontD + (g.S.melee ? 0.2 : reach * 0.75);
-    // 부대는 자기 줄(laneY)을 지킨다: 적 쪽으로는 25%만 기운다 — 모든 부대가 한 덩어리 기둥으로 모이지 않게 (집결 명령으로 옮긴 줄은 그대로)
+    // 부대는 자기 줄(laneY)을 지킨다: 적 쪽으로는 45%만 기운다 — 모든 부대가 한 덩어리 기둥으로 모이지 않게 (집결 명령으로 옮긴 줄은 그대로)
     const lane = g.rallied ? g.uy : g.laneY != null ? g.laneY : g.uy;
     let tx = best.x - g.dir * stand, ty = lane + (best.y - lane) * 0.45;
     // 총대장 친위대는 예비대: 총공세 전 「전군 돌격」이면 아군 다른 부대들의 앞줄보다 2.5 뒤에 선다 (다가온 적은 그대로 상대한다)
@@ -514,7 +514,7 @@ const Field = {
       hit(tgt.s, 1);
       // 기동 포격: 병사의 포탄은 맞은 병사 옆 한 명에게도 40% 피해
       if (!isGen && a.cls === 2) { const o = tg.soldiers.find((x) => x !== tgt.s && x.alive && Math.hypot(x.x - tgt.x, (x.y - tgt.y) * 1.3) < 0.6); if (o) hit(o, 0.4); }
-      if (isGen) { let n = 0; for (const o of tg.soldiers) { if (n >= 3) break; if (o !== tgt.s && o.alive && Math.hypot(o.x - tgt.x, (o.y - tgt.y) * 1.3) < 0.9) { hit(o, 0.5); n++; } } }
+      if (isGen) { let n = 0; for (const o of tg.soldiers) { if (n >= 5) break; if (o !== tgt.s && o.alive && Math.hypot(o.x - tgt.x, (o.y - tgt.y) * 1.3) < 1.0) { hit(o, 0.5); n++; } } } // 장수는 한 번에 주변 다섯까지 벤다 (군영전의 장수다움)
     }
   },
   killSoldier(s, by) {
@@ -687,8 +687,8 @@ const Field = {
   },
   // 하위 호환: 쓸 수 있는 가장 큰 무장기
   skill(g) { for (let i = g.skills.length - 1; i >= 0; i--) if (this.canCast(g, i) && this.cast(g, i, true)) return true; return false; },
-  aiSkill(g) {
-    const order = g.skills.map((s, i) => i).filter((i) => this.canCast(g, i)).sort((a, b) => g.skills[b].cost - g.skills[a].cost);
+  aiSkill(g, smallOnly) {
+    const order = g.skills.map((s, i) => i).filter((i) => this.canCast(g, i) && !(smallOnly && g.skills[i].id === "storm")).sort((a, b) => g.skills[b].cost - g.skills[a].cost);
     if (!order.length) return;
     const saving = g.skills.some((s) => s.big && s.cost > g.mp && g.mp + 25 >= s.cost);
     for (const i of order) {
@@ -808,7 +808,7 @@ const Field = {
     if (f.s) {
       if (!f.s.alive || !dS) return;
       f.s.hp -= dS * FLD.SK_SOLDIER * (o.ctx && o.ctx.big ? 1.8 : 1) * mul * (tg.guard > 0 ? 0.6 : 1) * tg.form.def * this.wallMul(f.s, tg.side) * (o.ctx && o.ctx.k >= o.ctx.cap ? 0 : 1);
-      if (f.s.spr && FUI.stage) { f.s.spr.kb = { t: 0, dir: Math.sign(f.s.x - g.x) || 1 }; f.s.spr.hitT = 0.12; }
+      if (f.s.spr && FUI.stage && !(o.ctx && o.ctx.k >= o.ctx.cap)) { f.s.spr.kb = { t: 0, dir: Math.sign(f.s.x - g.x) || 1 }; f.s.spr.hitT = 0.12; } // (처치 상한을 넘긴 타격은 피해가 없으니 피격 연출도 없다)
       if (f.s.hp <= 0) { this.killSoldier(f.s, g); g.skK++; if (o.ctx) o.ctx.k++; if (f.s.spr) f.s.spr.launch = { t: 0, dir: Math.sign(f.s.x - g.x) || 1 }; } // 무장기에 쓰러진 병사는 튕겨 날아간다
     } else {
       if (tg.hp <= 0 || tg.b.out || !dG) return;
@@ -855,7 +855,7 @@ const Field = {
       // 일기토는 개전 12초 뒤부터, 총대장이 끼면 20초 뒤부터 (첫 접전에서 한 번에 끝나지 않게)
       if ((this.isLead(a) || this.isLead(b)) && this.t < 20) continue;
       const seek = a.cmd === "gen"; // a가 신청하는 쪽
-      if (this.d(a, b) > (seek ? (a.focus === b ? 3 : 1.6) : 0.9)) continue; // 장수 돌격으로 그 적장을 목표로 삼았으면 3 안에서 신청한다
+      if (this.d(a, b) > (seek ? (a.focus === b ? 3 : 1.6) : 1.4)) continue; // (그냥 맞붙은 장수끼리도 1.4 안이면) // 장수 돌격으로 그 적장을 목표로 삼았으면 3 안에서 신청한다
       const pk = this.duelPair && (this.duelPair[a.b.id + ">" + b.b.id] ?? this.duelPair[b.b.id + ">" + a.b.id]); if (pk != null && this.t - pk < 40) continue;
       // AI 신청자도 무력을 따진다: 총대장은 무력이 앞설 때만, 다른 장수는 크게 뒤지면 신청하지 않는다
       // (내 장수도 「일기토 자동 판정」이 켜져 있으면 같은 규칙 — 무모한 신청을 하지 않는다)
@@ -898,10 +898,10 @@ const Field = {
     }
     // 직접 일기토를 하는 내 장수는 받는다(수락은 위에서). 「일기토 자동 판정」이면 내 장수도 AI와 같은 규칙으로 받을지 정한다
     else accepted = !hopeless && ((this.ctrl(tg.b) && !Battle.autoDuel) || aiAccept());
-    (this.duelPair ||= {})[ch.b.id + ">" + tg.b.id] = this.t; // 같은 두 장수는 60초 동안 다시 맞붙지 않는다
+    (this.duelPair ||= {})[ch.b.id + ">" + tg.b.id] = this.t; // 같은 두 장수는 40초 동안 다시 맞붙지 않는다
     if (!accepted) {
       // 훨씬 센 적(무력 15 넘게 위)의 신청은 거절해도 부끄럽지 않다 — 사기 손실 없음
-      if (ch.b.st.war - tg.b.st.war > 15 || hopeless) { this.say(`${jo(tg.b.name, "이가")} 훨씬 강한 ${ch.b.name}의 일기토를 피했다`, tg.side === this.mySide ? "" : "hot"); return; }
+      if (ch.b.st.war - tg.b.st.war > 15 || hopeless) { if (ch.side === this.mySide || tg.side === this.mySide) this.say(`${jo(tg.b.name, "이가")} 훨씬 강한 ${ch.b.name}의 일기토를 피했다`, tg.side === this.mySide ? "" : "hot"); return; } // (아군과 무관하면 기록하지 않는다)
       tg.mor = Math.max(0, tg.mor - 15); ch.mor = Math.min(100, ch.mor + 10);
       this.say(`${jo(tg.b.name, "이가")} ${ch.b.name}의 일기토를 거절했다 — 사기 하락`, tg.side === this.mySide ? "war" : "hot");
       return;
@@ -1499,7 +1499,7 @@ const FUI = {
       el.classList.toggle("mini", (x !== p.x || y !== p.y) && F_.sel !== g);
       placed.push({ x, y, foe: g.side !== F_.mySide, extra: 0, el, name }); p.x = x;
       el.style.transform = `translate(${Math.round(p.x)}px, ${Math.round(y)}px)`;
-      el.children[0].textContent = name;
+      el.children[0].textContent = g.kills ? `${name} · ${g.kills}` : name; // 처치 수
       el.children[1].firstChild.style.width = `${(g.hp / g.hpMax) * 100}%`;
       el.children[2].firstChild.style.width = `${(g.mp / g.mpMax) * 100}%`;
       el.children[3].textContent = g.stun > 0 ? "기절" : g.guard > 0 ? "역장" : g.buff > 0 ? "강화" : g.b.trait ? TRAIT_KO[g.b.trait] : ""; el.classList.toggle("waver", g.mor < 30); // 동요는 글자 대신 라벨 색으로
@@ -1579,10 +1579,11 @@ const FUI = {
     if (head.offsetHeight !== this.fheadH) { this.fheadH = head.offsetHeight; document.documentElement.style.setProperty("--fhead", `${this.fheadH}px`); }
     for (const s of ["atk", "def"]) {
       if (F_.finished) break; // 끝난 뒤에는 상단 병력을 고치지 않는다 (회복분은 결과 화면에서만)
-      const cur = F_.units[s].reduce((a, b) => a + (b.out ? 0 : b.troops), 0), max = F_.units[s].reduce((a, b) => a + b.max, 0) || 1;
+      const routing = F_.routing && F_.routing.s === s; // 퇴각 중인 쪽은 살아서 물러나는 병력을 그대로 보여 준다 (0이 아니라)
+      const cur = F_.units[s].reduce((a, b) => a + (b.out && !(routing && b.withdrawn) ? 0 : b.troops), 0), max = F_.units[s].reduce((a, b) => a + b.max, 0) || 1;
       const al = F_.alive(s), mor = al.length ? Math.round(al.reduce((a, g) => a + g.mor, 0) / al.length) : 0;
       const box = head.querySelector(".fSide." + s); box.querySelector(".fBar i").style.width = `${(cur / max) * 100}%`; const mb = box.querySelector(".fMorBar"); if (mb) { mb.firstChild.style.width = `${mor}%`; mb.classList.toggle("low", mor < 35); } const ct = F_.collapseT && F_.collapseT[s], cd = ct != null && mor < 30 && !(F_.routing && F_.routing.s !== s) ? Math.max(0, Math.ceil(FLD.COLLAPSE_T - (F_.t - ct))) : null; // 총붕괴 뒤 퇴각까지 남은 초 (사기 30 이상으로 회복하면 멈춘다)
-      box.querySelector("small").textContent = (cur <= 0 && al.some((g) => !g.b.generic && g.hp > 0) ? `병사 전멸 — 장수만 남았다 · 사기 ${mor}` : `${fmt(cur)} / ${fmt(max)} · 사기 ${mor}`) + (cd != null ? ` · 총붕괴! 퇴각까지 ${cd}초` : "");
+      box.querySelector("small").textContent = routing ? `퇴각 중 — ${fmt(cur)}명이 물러난다` : (cur <= 0 && al.some((g) => !g.b.generic && g.hp > 0) ? `병사 전멸 — 장수만 남았다 · 사기 ${mor}` : `${fmt(cur)} / ${fmt(max)} · 사기 ${mor}`) + (cd != null ? ` · 총붕괴! 퇴각까지 ${cd}초` : "");
       box.classList.toggle("collapse", cd != null);
     }
     // 시계: 총공세 전에는 총공세까지, 뒤에는 제한 시간까지 남은 시간 (다음 고비가 언제인지 보이게)
