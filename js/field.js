@@ -425,7 +425,7 @@ const Field = {
     const stand = g.frontD + (g.S.melee ? 0.2 : reach * 0.75);
     // 부대는 자기 줄(laneY)을 지킨다: 적 쪽으로는 25%만 기운다 — 모든 부대가 한 덩어리 기둥으로 모이지 않게 (집결 명령으로 옮긴 줄은 그대로)
     const lane = g.rallied ? g.uy : g.laneY != null ? g.laneY : g.uy;
-    let tx = best.x - g.dir * stand, ty = lane + (best.y - lane) * 0.25;
+    let tx = best.x - g.dir * stand, ty = lane + (best.y - lane) * 0.45;
     // 총대장 친위대는 예비대: 총공세 전 「전군 돌격」이면 아군 다른 부대들의 앞줄보다 2.5 뒤에 선다 (다가온 적은 그대로 상대한다)
     if (this.isLead(g) && g.cmd === "charge" && !this.surge) { let fr = null; for (const o of this.groups) if (o !== g && o.side === g.side && !o.b.out && o.ux != null && o.soldiers.some((s) => s.alive)) fr = fr == null ? o.ux : g.dir > 0 ? Math.max(fr, o.ux) : Math.min(fr, o.ux); if (fr != null && (tx - (fr - g.dir * 2.5)) * g.dir > 0) tx = fr - g.dir * 2.5; }
     if ((tx - g.ux) * g.dir < 0 || g.engaged > 0.45) tx = g.ux; // 전열은 스스로 물러나지 않는다 · 맞붙은 부대는 그 자리를 지킨다
@@ -1536,6 +1536,8 @@ const FUI = {
       Object.assign(z.el.style, { left: `${Math.round(a.x)}px`, top: `${Math.round(a.y)}px`, width: `${Math.max(0, Math.round(b.x - a.x))}px`, height: `${Math.round(b.y - a.y)}px` }); // (cssText로 덮으면 지형 무늬가 지워진다)
     }
     this.drawAim(F_);
+    // 떠 있는 글자·예고 원을 세계 좌표에 붙인다: 생길 때의 카메라 위치(data-cx)와 지금의 차이만큼 가로로 옮긴다 (범위 미리보기는 매번 다시 그리므로 제외)
+    { const fl = this.$stage.querySelector(".fFloat"), ppu = this.ppu(); if (fl) for (const el of fl.children) { if (el.classList.contains("fAim")) continue; if (el.dataset.cx == null) el.dataset.cx = this.camX; el.style.marginLeft = `${((+el.dataset.cx - this.camX) * ppu).toFixed(1)}px`; } }
     this.hud(F_);
   },
   // 무장기 범위 미리보기: 무장기 버튼에 마우스를 올리면 지금 쓰면 맞을 곳(자동 조준)을 전장에 그린다
