@@ -721,6 +721,8 @@ details.mateHint summary::before { content: "▸ "; } details.mateHint[open] sum
     radial-gradient(ellipse at 30% 50%, #6b5a3a33 0 40px, #0000 70px) 0 0 / 420px 160px,
     repeating-linear-gradient(90deg, #ffffff06 0 1px, #0000 1px 110px),
     linear-gradient(#7d6a46, #5e5236 22%, #4a4029 60%, #2e281b); }
+.fGround.cool { background-color: #2c333a; background-image: radial-gradient(circle at 20% 30%, #fff1 0 2px, #0000 3px), radial-gradient(ellipse at 60% 60%, #0000002e 0 10px, #0000 14px), radial-gradient(ellipse at 30% 50%, #5a6a7a33 0 40px, #0000 70px), repeating-linear-gradient(90deg, #ffffff08 0 1px, #0000 1px 110px), linear-gradient(#56616c, #3e4852 22%, #2f3740 60%, #1d2228); }
+.fGround.cool::before { background: linear-gradient(#0000, #56616caa 65%, #56616c); }
 .fGround::before { content: ""; position: absolute; left: 0; right: 0; top: -26px; height: 40px; background: linear-gradient(#0000, #7d6a46aa 65%, #7d6a46); }
 .fGround::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, #3d7bd814, #0000 18%, #0000 82%, #d84a3d14), linear-gradient(#0000 55%, #0007); }
 .fStage .stageCanvas { position: absolute; inset: 0; z-index: 1; }

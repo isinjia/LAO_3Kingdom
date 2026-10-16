@@ -7,7 +7,7 @@
 //   승패: 적 총대장 격파 · 적 전멸 · 적 총붕괴 후 퇴각 / 제한 시간이 지나면 남은 전력 비교(공격측은 1.4배 필요)
 "use strict";
 
-const FLD = { X0: -19, X1: 19, Y0: -5.4, Y1: 0.6, TIME: 240, SURGE: 90, SURGE_K: 1.3, START: 7.5, FORM_CD: 40, EDGE_UP: 1.15, EDGE_DN: 0.91, SOLDIER_HP: 4000, GEN_VS_SOLDIER: 1.6, ALONE_DECAY: 1.5, SK_SOLDIER: 3.2, WALL_W: 3.6, PER: 120, COLLAPSE_T: 10 };
+const FLD = { X0: -19, X1: 19, Y0: -5.4, Y1: 0.6, TIME: 240, SURGE: 60, SURGE_K: 1.3, START: 7.5, FORM_CD: 40, EDGE_UP: 1.15, EDGE_DN: 0.91, SOLDIER_HP: 4000, GEN_VS_SOLDIER: 1.6, ALONE_DECAY: 1.5, SK_SOLDIER: 3.2, WALL_W: 3.6, PER: 120, COLLAPSE_T: 10 };
 const fmtN = (n) => Math.round(n).toLocaleString();
 // 진영색: 같은 병사 리그를 쓰는 양군을 구분한다 (공격 = 푸른빛, 수비 = 붉은빛)
 const FLD_TEAM = { atk: [0.86, 1.0, 1.35], def: [1.3, 0.84, 0.76] };
@@ -67,7 +67,7 @@ const Field = {
     Object.assign(this, { w, entry, mySide: entry.playerSide, finished: false, paused: false, busy: false, freeze: 0, t: 0, logLines: [], frames: {},
       timers: [], waves: [], duelCd: 12, aiT: -9, sel: null, scope: "all", groups: [], casts: { atk: 0, def: 0 },
       // 전투마다 새로 시작해야 하는 상태 (Field는 한 객체를 계속 쓰므로 이전 전투의 값이 남지 않게 초기화)
-      surge: false, collapsed: {}, formCd: {}, formReact: {}, formAI: null, warnFocus: false, stepErr: false, retreatOk: -9, retreatOkReal: 0, spareMilitia: 0, contact: false, scouted: false, slow: 0, hitStop: 0, collapseT: {}, duelPair: {}, spotted: false, routing: null, hotX: null, hotT: -9 });
+      surge: false, collapsed: {}, formCd: {}, formReact: {}, formAI: null, warnFocus: false, stepErr: false, retreatOk: -9, retreatOkReal: 0, spareMilitia: 0, contact: false, scouted: false, slow: 0, hitStop: 0, collapseT: {}, duelPair: {}, spotted: false, routing: null, hotX: null, hotT: -9, surgeEarly: false, lossChkT: 0 });
     const mk = (x, side) => ({ u: x.u, id: x.u.id, code: x.u.id, name: x.u.name, st: x.u.st, cls: x.u.cls, role: x.u.role, troops: x.troops, max: x.troops, morale: 80, side, out: false, lord: isLord(x.u), trait: x.u.iron ? IRON_TRAIT[x.u.id] || null : null });
     const byLead = (arr, side) => arr.sort((x, y) => { const k = (b) => (entry.commander && side === entry.playerSide && p && b.id === p.id ? 1e9 : 0) + (b.lord ? 1e8 : 0) + (b.u ? b.u.merit : 0); return k(y) - k(x); });
     const atk = byLead(w.atk.map((x) => mk(x, "atk")), "atk"), def = byLead(w.def.map((x) => mk(x, "def")), "def");
@@ -410,7 +410,9 @@ const Field = {
     }
     if (this.t - this.aiT >= 1) { this.aiT = this.t; this.contactCheck(); this.aiCommand(); this.collapseCheck(); }
     // 총공세: FLD.SURGE(75초)가 지나면 양군 모두 사생결단 (주는 피해 ×FLD.SURGE_K, 총대장도 앞으로 나선다)
-    if (!this.surge && this.t >= FLD.SURGE) { this.surge = true; const pc = Math.round((FLD.SURGE_K - 1) * 100); this.say(`총공세! 양군이 사생결단으로 맞붙는다 — 주는 피해 +${pc}%, 총대장도 나선다`, "hot key"); if (!this.sim) UI.banner("총공세", `남은 시간 ${FLD.TIME - FLD.SURGE}초 — 주는 피해 +${pc}%`, 1100); }
+    // 총공세: 60초가 되거나, 접전 뒤 전체 병사의 40%가 쓰러지면 (판이 기울기 전에 고비가 온다)
+    if (!this.surge && this.contact && this.t >= 20 && this.t - (this.lossChkT || 0) >= 1) { this.lossChkT = this.t; let n0 = 0, live = 0; for (const o of this.groups) { n0 += o.n0; live += o.soldiers.filter((x) => x.alive).length; } if (live <= n0 * 0.6) this.surgeEarly = true; }
+    if (!this.surge && (this.t >= FLD.SURGE || this.surgeEarly)) { this.surge = true; const pc = Math.round((FLD.SURGE_K - 1) * 100); this.say(`총공세! 양군이 사생결단으로 맞붙는다 — 주는 피해 +${pc}%, 총대장도 나선다`, "hot key"); if (!this.sim) UI.banner("총공세", `남은 시간 ${FLD.TIME - FLD.SURGE}초 — 주는 피해 +${pc}%`, 1100); }
     this.duelCheck(dt);
     this.checkEnd();
   },
@@ -459,7 +461,7 @@ const Field = {
   // 피해 배율: 결속 · 진형 · 진형 상성 · 사기 · 강화
   mulVs(g, tg) { return (g.b.mult || 1) * g.form.atk * (FORM_EDGE[g.fk] === tg.fk ? FLD.EDGE_UP : FORM_EDGE[tg.fk] === g.fk ? FLD.EDGE_DN : 1) * (0.9 + g.mor / 500) * (g.buff > 0 ? 1.4 : 1) * (this.surge ? FLD.SURGE_K : 1) * (g.formT > this.t ? 0.7 : 1); },
   // 장수가 받는 피해 배율: 총대장 친위대 · 진형 · 역장 · 보호기 · 성 방어
-  genK(tg) { return (this.isLead(tg) && !tg.iso ? 0.6 : 1) * tg.form.def * (tg.guard > 0 ? 0.6 : 1) * (tg.b.role === 0 ? 0.88 : 1); }, // 성 방어는 wallMul에서 한 번만 적용한다
+  genK(tg) { return (this.isLead(tg) && !tg.iso ? (this.surge ? 0.8 : 0.6) : 1) /* 총공세 뒤에는 총대장 친위 보호가 절반으로(-40% → -20%) — 총대장을 쓰러뜨리는 결말이 나오게 */ * tg.form.def * (tg.guard > 0 ? 0.6 : 1) * (tg.b.role === 0 ? 0.88 : 1); }, // 성 방어는 wallMul에서 한 번만 적용한다
   genHit(tg, v) {
     tg.lossT = this.t; tg.mor = Math.max(0, tg.mor - (v / tg.hpMax) * 40);
     const r = tg.hp / tg.hpMax, stage = r < 0.25 ? 2 : r < 0.5 ? 1 : 0;
@@ -561,7 +563,7 @@ const Field = {
     // 배너는 아군 장수·적 총대장의 패주에만 (전장 한가운데를 자주 가리지 않게)
     // 총대장이 쓰러지는 순간: 잠깐 느려지며 카메라가 그쪽을 비춘다
     if (!this.sim && !g.b.generic && this.isLead(g)) { this.slow = 1.1; if (FUI.stage) { const wasFollow = FUI.follow; FUI.setFollow(false); FUI.camX = g.x; FUI.stage.burst(g.x, g.y + 0.9, 0xffe28a, 2.4, 0.6); FUI.shake(true); if (wasFollow) setTimeout(() => FUI.stage && FUI.setFollow(true), 1600); } } // 슬로모션이 끝나면 다시 추적 카메라로
-    if (!this.sim && !g.b.generic && (g.side === this.mySide || this.isLead(g))) UI.banner(`${g.b.name} 패주`, g.side === this.mySide ? "아군 장수가 쓰러졌다" : "적장을 쓰러뜨렸다", 900, g.side === this.mySide ? "lose" : "win");
+    if (!this.sim && !g.b.generic && this.isLead(g)) UI.banner(`${g.b.name} 패주`, g.side === this.mySide ? "아군 장수가 쓰러졌다" : "적장을 쓰러뜨렸다", 900, g.side === this.mySide ? "lose" : "win");
     if (this.sel === g) this.sel = this.groups.find((o) => !o.b.out && this.ctrl(o.b)) || g;
   },
 
@@ -1008,7 +1010,7 @@ const Field = {
     const up = FORM_EDGE[fk] === fo, down = FORM_EDGE[fo] === fk, mineSide = side === this.mySide;
     const edge = up ? (mineSide ? " — 상성 우위!" : " — 아군 상성 열세") : down ? (mineSide ? " — 상성 열세" : " — 아군 상성 우위!") : "";
     this.say(`${side === this.mySide ? "아군" : "적군"} 진형 변경: 「${FORMS[fk].n}」${edge}`, side === this.mySide ? "hot key" : "war key");
-    if (!this.sim) { UI.banner(`진형 변경 — ${FORMS[fk].n}`, side === this.mySide ? `6초간 재정비(주는 피해 -30%) · 사기 -15 · 다음 변경까지 ${FLD.FORM_CD}초` : "적이 진형을 바꿨다", 1000); Sound.sfx("click", 0.6); }
+    if (!this.sim) Sound.sfx("click", 0.6); // (진형 변경은 기록·상단 진형 표시로 알린다 — 가운데 배너는 개전·총공세·총대장 패주·결과만)
     return true;
   },
 
@@ -1157,7 +1159,7 @@ const Field = {
         this.say(`${side === this.mySide ? "아군" : "적군"} 총붕괴! 병사들이 앞다투어 달아난다`, side === this.mySide ? "war key" : "hot key");
         // 양쪽이 3초 안에 잇달아 무너지면 배너는 처음 한 번만 (기록과 상단 바 초읽기로 알린다)
         const other = this.collapseT[side === "atk" ? "def" : "atk"];
-        if (!this.sim && !(other != null && this.t - other < 3)) UI.banner("총붕괴", side === this.mySide ? `아군이 무너진다 — ${FLD.COLLAPSE_T}초 안에 사기를 세우지 못하면 퇴각` : `적군이 무너진다 — ${FLD.COLLAPSE_T}초 버티면 승리`, 1300, side === this.mySide ? "lose" : "win");
+        // (총붕괴는 기록·말풍선·상단 초읽기로 알린다)
       }
     }
   },
@@ -1258,7 +1260,9 @@ const FUI = {
     const bg = typeof CITY_BG !== "undefined" && CITY_BG[F_.w.to] ? `url(assets/city/${CITY_BG[F_.w.to]}.jpg)` : "none";
     el.style.setProperty("--fbg", bg);
     this.$bg = h("div", { class: "fBg" });
-    this.$ground = h("div", { class: "fGround" }); this.groundY = null;
+    // 철충·AGS 수비전은 땅을 차가운 잿빛으로 (갈색 기체·병사가 갈색 땅에 묻히지 않게)
+    const dfF = F(F_.w.defFac), cool = dfF && (dfF.iron || String(dfF.lord || "").startsWith("AGS_"));
+    this.$ground = h("div", { class: "fGround" + (cool ? " cool" : "") }); this.groundY = null;
     this.$stage = h("div", { class: "fStage" }, this.$bg, this.$ground,h("div", { class: "fZones" }), h("div", { class: "fLabels" }), h("div", { class: "fFloat" }), h("div", { class: "fFlash" }), h("div", { class: "fPauseTag" }, "일시정지 — P / Space로 재개"));
     this.$map = h("canvas", { class: "fMap", width: 300, height: 56, title: "미니맵 — 클릭하면 그곳을 본다" });
     const sideBox = (s) => h("div", { class: "fSide " + s }, h("b", null, s === "atk" ? F(F_.w.atkFac).name : F_.w.defFac ? F(F_.w.defFac).name : "수비군"), h("div", { class: "fBar" }, h("i")), h("div", { class: "fMorBar", title: "평균 사기 — 눈금(22) 아래로 떨어지고 병사를 많이 잃으면 총붕괴" }, h("i"), h("b")), h("small"));
