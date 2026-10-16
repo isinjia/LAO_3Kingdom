@@ -80,12 +80,12 @@ const Stage = (() => {
     for (let i = 0; i < 40 && !a.sd; i++) await new Promise((r) => setTimeout(r, 50));
     const out = { aspect: W / H };
     if (a.sd) {
-      for (const [name, n] of [["move", 6], ["atk", 5], ["idle", 1]]) {
-        const c = a.sd; const clip = c.has(name) ? name : name === "move" && c.has("idle") ? "idle" : "idle";
+      for (const [name, n] of [["move", 6], ["atk", 5], ["idle", 4], ["die", 5]]) {
+        const c = a.sd; if (name === "die" && !c.has("die")) continue; // (쓰러짐은 마지막 자세까지 굽는다) const clip = c.has(name) ? name : name === "move" && c.has("idle") ? "idle" : "idle";
         c.play(clip, null, true); c.speed = 0; c.fadeD = 0;
         const dur = c.clip ? c.clip.dur : 1; out[name] = [];
         for (let k = 0; k < n; k++) {
-          c.time = (dur * k) / n; c.apply(); c.render(); st.tick(0);
+          c.time = name === "die" ? (dur * 0.97 * k) / (n - 1) : (dur * k) / n; c.apply(); c.render(); st.tick(0);
           const cv = document.createElement("canvas"); cv.width = st.canvas.width; cv.height = st.canvas.height;
           cv.getContext("2d").drawImage(st.canvas, 0, 0); out[name].push(cv);
         }
@@ -200,7 +200,7 @@ const Stage = (() => {
         const c = a.sd;
         const n = c.has(name) ? name : name === "skill" && c.has("atk") ? "atk" : name === "win" ? "idle" : name;
         if (!c.has(n)) { if (name === "hit") a.shake = 0.3; return res(); } // 피격 모션이 없는 리그는 흔들림으로
-        if (loop) { c.play(n, null, true); return res(); }
+        c.speed = 1; if (loop) { c.play(n, null, true); return res(); }
         let done = false; const fin = () => { if (!done) { done = true; res(); } };
         c.play(n, () => { if (n === "die") { c.play("die"); c.time = c.clip.dur - 0.01; c.speed = 0; } fin(); });
         setTimeout(fin, Math.min(2600, (c.clip ? c.clip.dur : 1) * 1000 + 60));
@@ -211,7 +211,7 @@ const Stage = (() => {
     // frames: { move: [canvas...], atk: [canvas...], aspect } (Stage.bake 결과)
     addSprite(frames, x, y, h, face = 1) {
       if (!this.scene) return null;
-      const s = { sprite: true, frames, x, y, h, face, anim: "move", fi: 0, ft: 0, opacity: 1, alive: true, sink: 0 };
+      const s = { sprite: true, frames, x, y, h, face, anim: frames.idle ? "idle" : "move", fi: 0, ft: 0, opacity: 1, alive: true, sink: 0 };
       const tex = texOf(frames.move[0]);
       s.mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
       s.mesh = new THREE.Mesh(spriteGeo(), s.mat);
@@ -221,7 +221,7 @@ const Stage = (() => {
       (this.sprites ||= []).push(s);
       return s;
     }
-    spriteAnim(s, name, once) { if (!s || s.anim === name && !once) return; s.anim = name; s.fi = 0; s.ft = 0; s.once = !!once; }
+    spriteAnim(s, name, once) { if (!s || s.anim === name && !once) return; s.anim = name; s.fi = name === "idle" ? (Math.random() * 4) | 0 : 0; s.ft = 0; s.once = !!once; } // (대기는 저마다 다른 프레임에서 시작 — 한꺼번에 숨 쉬지 않게)
     removeSprite(s) { if (!s || !s.mesh) return; this.scene.remove(s.mesh); if (s.shadow) { this.scene.remove(s.shadow); s.shadow = null; } s.mat.dispose(); s.mesh = null; s.alive = false; }
 
     // 바라보는 방향 전환 (1 = 오른쪽, -1 = 왼쪽). 리그 루트의 좌우 반전과 기준점을 함께 뒤집는다
@@ -327,7 +327,7 @@ const Stage = (() => {
         if (a.shake > 0) { a.shake -= dt; ox = (Math.random() - 0.5) * 0.25; }
         if (a.jump > 0) { a.jump -= dt; oy = Math.sin((0.4 - a.jump) / 0.4 * Math.PI) * 0.6; ox = a.face * Math.sin((0.4 - a.jump) / 0.4 * Math.PI) * 0.8; }
         // 돌진(목표 쪽으로 나갔다 복귀)과 넉백(맞은 방향으로 밀렸다 복귀)
-        if (a.lunge) { a.lunge.t += dt; const k = Math.min(1, a.lunge.t / a.lunge.d); ox += a.lunge.dx * Math.sin(k * Math.PI) * (k < 0.5 ? 1 : 1); oy += Math.sin(k * Math.PI) * 0.25; if (k >= 1) a.lunge = null; }
+        if (a.lunge) { a.lunge.t += dt; const k = Math.min(1, a.lunge.t / a.lunge.d); ox += a.lunge.dx * Math.sin(k * Math.PI); /* 앞뒤로만 (위아래로 출렁이지 않게) */ if (k >= 1) a.lunge = null; }
         if (a.kb) { a.kb.t += dt; const k = Math.min(1, a.kb.t / 0.32); ox += a.kb.dir * a.kb.pow * Math.sin(Math.min(1, k * 1.6) * Math.PI / 2) * (1 - k); if (k >= 1) a.kb = null; }
         if (a.token && !a.dying) { const t = performance.now() / 420 + a.x; a.token.position.y = a.h * 0.38 + Math.sin(t) * 0.05; const k = a.h * 0.62 * (1 + Math.sin(t * 1.3) * 0.012); a.token.scale.set(k * 220 / 300, k, 1); }
         if (a.dying && a.token) { a.dying -= dt; a.token.material.opacity = Math.max(0, a.dying); }
@@ -342,15 +342,15 @@ const Stage = (() => {
         this.sprites = this.sprites.filter((sp) => {
           if (!sp.mesh) return false;
           const fr = sp.frames[sp.anim] || sp.frames.move;
-          sp.ft += dt * (sp.anim === "atk" ? 12 : 9);
-          if (sp.ft >= 1) { sp.ft = 0; sp.fi++; if (sp.fi >= fr.length) { if (sp.once) { sp.once = false; sp.anim = sp.idle ? "idle" : "move"; } sp.fi = 0; } }
+          sp.ft += dt * (sp.anim === "atk" ? 12 : sp.anim === "die" ? 14 : sp.anim === "idle" ? 4 : 9 * (sp.rate || 1)); // 걸음은 실제 속도에 맞춘다 (발이 미끄러지지 않게)
+          if (sp.ft >= 1) { sp.ft = Math.min(1, sp.ft - 1); sp.fi++; if (sp.fi >= fr.length) { if (sp.anim === "die") sp.fi = fr.length - 1; else if (sp.once) { sp.once = false; sp.anim = sp.idle ? "idle" : "move"; } sp.fi = 0; } }
           const cur = (sp.frames[sp.anim] || sp.frames.move)[sp.fi % (sp.frames[sp.anim] || sp.frames.move).length];
           const tex = texOf(cur); if (sp.mat.map !== tex) { sp.mat.map = tex; sp.mat.needsUpdate = true; }
           let fall = 0;
           if (sp.dying != null) {
-            sp.dying -= dt; sp.opacity = sp.corpse ? Math.max(0, Math.min(0.3, sp.dying / 2)) : Math.max(0, Math.min(1, sp.dying / 0.45)); // 시체는 옅게 남았다가 마지막 2초에 사라진다
+            sp.dying -= dt; sp.opacity = sp.corpse ? Math.max(0, Math.min(0.85, sp.dying / 1.2)) : Math.max(0, Math.min(1, sp.dying / 0.45)); // 시체는 옅게 남았다가 마지막 2초에 사라진다
             // 쓰러짐: 맞은 반대쪽으로 넘어지며 사라진다 (탈주·철수 병사는 그냥 흐려진다)
-            if (!sp.noFall) { sp.fallT = (sp.fallT || 0) + dt; fall = Math.min(1, sp.fallT / 0.22); } else sp.sink += dt * 0.5;
+            if (!sp.noFall) { if (sp.frames.die && !sp.launch) { if (sp.anim !== "die") this.spriteAnim(sp, "die"); } else { sp.fallT = (sp.fallT || 0) + dt; fall = Math.min(1, sp.fallT / 0.22); } } else sp.sink += dt * 0.5; // 쓰러짐 동작이 있으면 그 동작으로 넘어진다
             if (sp.dying <= 0) { this.removeSprite(sp); return false; }
           }
           sp.mesh.rotation.z = fall ? -sp.face * fall * 1.35 : 0;
@@ -360,7 +360,8 @@ const Stage = (() => {
           if (sp.kb) { sp.kb.t += dt; const k = Math.min(1, sp.kb.t / 0.25); ox += sp.kb.dir * 0.3 * Math.sin(k * Math.PI); if (k >= 1) sp.kb = null; }
           // 피격 번쩍임: 맞은 순간 잠깐 밝아진다
           if (sp.hitT > 0) sp.hitT -= dt;
-          sp.mat.opacity = sp.opacity; { const k = (sp.tint || 1) * (sp.hitT > 0 ? 2.2 : 1), c = sp.corpse && sp.dying != null ? [0.55, 0.55, 0.55] : sp.team; /* 시체는 진영색 없이 회색 */ if (c) sp.mat.color.setRGB(c[0] * k, c[1] * k, c[2] * k); else sp.mat.color.setScalar(k); }
+          if (sp.rise > 0) sp.rise -= dt; // 되살아난 병사는 서서히 나타난다
+          sp.mat.opacity = sp.opacity * (sp.rise > 0 ? 1 - sp.rise / 0.4 : 1); { const k = (sp.tint || 1) * (sp.hitT > 0 ? 2.2 : 1), c = sp.corpse && sp.dying != null && sp.team ? sp.team.map((v) => v * 0.6 + 0.12) : sp.team; /* 시체는 진영색을 어둡게 (회색 유령처럼 보이지 않게) */ if (c) sp.mat.color.setRGB(c[0] * k, c[1] * k, c[2] * k); else sp.mat.color.setScalar(k); }
           const w = sp.h * sp.frames.aspect;
           sp.mesh.scale.set(w * sp.face, sp.h, 1);
           // 그리는 위치는 실제 위치를 부드럽게 따라간다 (밀어내기로 생기는 작은 떨림을 감춘다. 순간 이동처럼 크게 벌어지면 바로 맞춘다)

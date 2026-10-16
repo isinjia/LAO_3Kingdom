@@ -277,7 +277,7 @@ const Field = {
   // ── 메인 루프 (실시간: 0.05초 단위로 나눠 진행 — 배속이 높아도 충돌 판정이 빠지지 않는다) ──
   loop(now) {
     // 끝난 뒤에도 화면이 닫힐 때까지 그림은 계속 그린다 (승리 동작·흩어지는 병사가 멈추지 않게)
-    if (this.finished) { if (FUI.stage) { const r = Math.min(0.05, Math.max(0, (now - this.last) / 1000)); this.last = now; FUI.stage.timeScale = 1; FUI.stage.tick(r); requestAnimationFrame(this.loop); } return; }
+    if (this.finished) { if (FUI.stage) { const r = Math.min(0.25, Math.max(0, (now - this.last) / 1000)); this.last = now; FUI.stage.timeScale = 1; FUI.stage.tick(r); requestAnimationFrame(this.loop); } return; }
     // 한 프레임 최대 0.25초까지 따라잡는다 (4fps까지는 게임 시간이 느려지지 않는다. 진행은 0.05초 단위로 나눈다)
     const real = Math.min(0.25, Math.max(0, (now - this.last) / 1000)); this.last = now;
     if (this.hitStop > 0) this.hitStop -= real; // 히트스톱: 시간도 애니메이션도 잠깐 멈춘다
@@ -285,7 +285,7 @@ const Field = {
     // slow: 결정적인 순간(총대장 패주)의 슬로모션
     else if (!this.paused && !this.busy) { if (this.slow > 0) this.slow -= real; let d = real * this.speed * (this.slow > 0 ? 0.3 : 1); while (d > 1e-4 && !this.finished && !this.busy && this.freeze <= 0) { const s = Math.min(0.05, d); try { this.step(s); } catch (e) { if (!this.stepErr) { this.stepErr = true; console.error(e); this.say("전투 처리 중 오류가 났다 — 계속 진행한다", "war"); } } d -= s; } } // 한 스텝의 예외가 전투 루프를 멈추지 않게
     FUI.frame(this, real);
-    if (FUI.stage) FUI.stage.tick(Math.min(0.05, real)); // 갱신·카메라를 맞춘 바로 뒤에 그린다
+    if (FUI.stage) FUI.stage.tick(Math.min(0.25, real)); // 갱신·카메라를 맞춘 바로 뒤에 그린다
     requestAnimationFrame(this.loop);
   },
 
@@ -374,18 +374,20 @@ const Field = {
         // 같은 부대 병사끼리 겹치지 않게 살짝 밀어낸다
         for (const o of live) { if (o === s) continue; const dx = s.x - o.x, dy = (s.y - o.y) * 1.6, L = Math.hypot(dx, dy); if (L > 0 && L < 0.24) { s.x += (dx / L) * (0.24 - L) * 0.5; s.y = Math.max(FLD.Y0, Math.min(FLD.Y1, s.y + (dy / L) * (0.24 - L) * 0.3)); if (s.spr) { s.spr.x = s.x; s.spr.y = s.y; } } }
         if (C_.troop < 0) { this.moveToward(s, this.homeX(g) + s.home.x * 0.3, s.y, spd * dt * 1.05); this.anim(s, "move"); continue; }
+        const px = s.x, py = s.y;
         const hx = Math.max(FLD.X0, Math.min(FLD.X1, g.ux + s.home.x)), hy = Math.max(FLD.Y0, Math.min(FLD.Y1, g.uy + s.home.y));
         const tgt = this.nearest(s, foes, sReach + leash, sReach + 1); // 병사는 적 병사를 먼저 노린다
         if (tgt && this.d(s, tgt) <= sReach) {
           engaged++;
           // 경장 산개 사격: 근접 적이 바싹 붙으면 재장전하는 동안 한 걸음 물러나며 쏜다
-          if (g.b.cls === 0 && s.cool > 0 && tgt.g.S.melee && this.d(s, tgt) < 1.0 && C_.troop >= 0) { this.moveToward(s, s.x - (tgt.x - s.x), s.y, spd * dt * 0.7); this.anim(s, "move"); }
-          else this.anim(s, "idle");
+          if (g.b.cls === 0 && s.cool > 0 && tgt.g.S.melee && this.d(s, tgt) < 1.0 && C_.troop >= 0) { this.moveToward(s, s.x - (tgt.x - s.x), s.y, spd * dt * 0.7); }
           if (s.cool <= 0) this.attack(g, s, tgt, false);
         }
         // 앞의 적에게 나설 때도 진형의 세로 자리(hy)와 앞뒤 간격을 지킨다 — 맞붙어도 한 줄로 늘어서지 않고 진형 모양이 남는다
-        else if (tgt && Math.hypot(s.x - hx, s.y - hy) < leash + 0.6) { this.moveToward(s, tgt.x - g.dir * Math.min(sReach * 0.7, 2.4) + s.home.x * 0.5, hy, spd * dt); this.anim(s, "move"); }
-        else { const dd = Math.hypot(hx - s.x, hy - s.y); if (dd > 0.08) this.moveToward(s, hx, hy, spd * dt * 1.15); this.anim(s, dd > 0.25 ? "move" : "idle"); } /* 자리 보정 같은 작은 움직임은 대기 자세로 (걷기·대기가 번갈아 다리가 깜빡이지 않게) */
+        else if (tgt && Math.hypot(s.x - hx, s.y - hy) < leash + 0.6) { this.moveToward(s, tgt.x - g.dir * Math.min(sReach * 0.7, 2.4) + s.home.x * 0.5, hy, spd * dt); }
+        else { const dd = Math.hypot(hx - s.x, hy - s.y); if (dd > 0.08) this.moveToward(s, hx, hy, spd * dt * 1.15); } /* 자리 보정 같은 작은 움직임은 대기 자세로 (걷기·대기가 번갈아 다리가 깜빡이지 않게) */
+        // 걷기/대기는 실제로 움직인 속도로 고른다 (빠르면 걸음도 빠르게. 자리 보정 같은 작은 움직임은 대기)
+        { const v = Math.hypot(s.x - px, (s.y - py) / 0.7) / Math.max(1e-4, dt); s.mv = (s.mv || 0) * 0.75 + v * 0.25; const walk = s.spr && s.spr.anim === "move" ? s.mv > spd * 0.2 : s.mv > spd * 0.4; this.anim(s, walk ? "move" : "idle"); if (s.spr) s.spr.rate = Math.max(0.6, Math.min(1.4, s.mv / spd)); }
         // 맞닿은 적 병사와는 겹치지 않는다 — 양쪽이 서로 밀어내 맞닿은 자리에 전열이 선다 (적진을 통과하지 못한다)
         if (tgt && tgt.s && tgt.s.alive) { const dx = s.x - tgt.s.x, dy = (s.y - tgt.s.y) * 1.6, L = Math.hypot(dx, dy); if (L < 0.55) { const k = (0.55 - L) * 0.5, ux = L > 0.001 ? dx / L : -g.dir; s.x = Math.max(FLD.X0, Math.min(FLD.X1, s.x + ux * k)); if (s.spr) s.spr.x = s.x; } }
       }
@@ -456,9 +458,11 @@ const Field = {
     o.x += (dx / L) * Math.min(step, L); o.y += (dy / L) * Math.min(step, L) * 0.7;
     o.x = Math.max(FLD.X0, Math.min(FLD.X1, o.x)); o.y = Math.max(FLD.Y0, Math.min(FLD.Y1, o.y));
     if (o.spr) { o.spr.x = o.x; o.spr.y = o.y; o.spr.h = 0.95 * this.depth(o.y); if (Math.abs(dx) > 0.3) o.spr.face = dx > 0 ? 1 : -1; /* 자리 보정 같은 작은 움직임으로는 돌아서지 않는다 (좌우로 깜빡이던 것) */ }
-    if (o.actor && Math.abs(dx) > 0.3 && FUI.stage) FUI.stage.setFace(o.actor, dx > 0 ? 1 : -1);
+    // (장수가 바라보는 방향은 FUI.frame에서 실제 움직임·가까운 적으로 정한다)
   },
   // idle 표시를 남겨 두면 공격 동작이 끝난 뒤 제자리 걸음이 아니라 대기 자세로 돌아간다
+  // 장수 한 번짜리 동작: 원본 동작이 3~13초로 길어 실제 공격 간격에 맞춰 빠르게 튼다
+  gAnim(g, name) { const fx = FUI.stage; if (!fx || !g.actor) return; fx.play(g.actor, name); const c = g.actor.sd, T = { atk: 0.75, skill: 1.4, hit: 0.45 }[name]; if (c && c.clip && T) c.speed = Math.max(1, c.clip.dur / T); },
   anim(s, name) { if (!s.spr || !FUI.stage) return; s.spr.idle = name === "idle"; if (s.spr.anim !== "atk") FUI.stage.spriteAnim(s.spr, name); },
 
   // 피해 배율: 결속 · 진형 · 진형 상성 · 사기 · 강화
@@ -491,7 +495,7 @@ const Field = {
     v *= 0.85 + Math.random() * 0.3;
     const fx = FUI.stage;
     if (fx) {
-      if (isGen && g.actor) { const c = g.actor.sd; if (!c || (c.clipName !== "atk" && c.clipName !== "skill") || (c.clip && c.time > c.clip.dur * 0.75)) fx.play(g.actor, "atk"); /* 공격 동작이 거의 끝났을 때만 다시 (끊김 방지) */ if (S.melee) fx.lunge(g.actor, (tgt.x - g.x) * 0.4, 0.35); if (Math.random() < 0.5 && !Sound.charSfx(a.code, "s1")) Sound.sfx(S.melee ? "swing" : "shot", 0.5); }
+      if (isGen && g.actor) { const c = g.actor.sd; if (Math.abs(tgt.x - g.x) > 0.15) fx.setFace(g.actor, tgt.x > g.x ? 1 : -1); /* 치는 쪽을 바라본다 */ if (!c || (c.clipName !== "skill" && (c.clipName !== "atk" || (c.clip && c.time > c.clip.dur * 0.6)))) this.gAnim(g, "atk"); /* 공격 동작은 0.75초 — 타격마다 휘두른다 */ if (S.melee) fx.lunge(g.actor, (tgt.x - g.x) * 0.4, 0.35); if (Math.random() < 0.5 && !Sound.charSfx(a.code, "s1")) Sound.sfx(S.melee ? "swing" : "shot", 0.5); }
       if (!isGen && who.spr) { fx.spriteAnim(who.spr, "atk", true); who.spr.face = tgt.x > who.x ? 1 : -1; }
       // 사격: 짧은 탄이 날아가 박힌다 (병사 탄은 일부만 그려 화면을 덮지 않게) · 근접: 발밑 흙먼지와 작은 불꽃
       const col = g.side === "atk" ? 0x9fd6ff : 0xffb38a;
@@ -503,7 +507,7 @@ const Field = {
     if (tgt.gen) {
       const k = v * (isGen ? 0.9 : 0.4) * this.genK(tg) * this.wallMul(tg, tg.side);
       tg.hp = Math.max(0, tg.hp - k); this.genHit(tg, k);
-      if (tg.actor && fx && Math.random() < 0.3 && this.t - (tg.hitAnimT || -9) > 1.2 && !(tg.actor.sd && (tg.actor.sd.clipName === "atk" || tg.actor.sd.clipName === "skill"))) { tg.hitAnimT = this.t; fx.play(tg.actor, "hit"); fx.knock(tg.actor, Math.sign(tg.x - who.x) || 1, 0.2); }
+      if (tg.actor && fx && Math.random() < 0.3 && this.t - (tg.hitAnimT || -9) > 1.2 && !(tg.actor.sd && (tg.actor.sd.clipName === "atk" || tg.actor.sd.clipName === "skill"))) { tg.hitAnimT = this.t; this.gAnim(tg, "hit"); fx.knock(tg.actor, Math.sign(tg.x - who.x) || 1, 0.2); }
       if (isGen) { FUI.pop(this, tg.x, tg.y + 1.6, Math.round(k), "gen"); Sound.sfx("hit", 0.5); }
       if (tg.mpMax) tg.mp = Math.min(tg.mpMax, tg.mp + (isGen ? 1.5 : 0.3)); // 맞은 장수가 기력을 얻는다 (역전의 여지)
     } else {
@@ -561,7 +565,7 @@ const Field = {
     g.b.troops = Math.round(left.length * g.per * 0.5);
     // 패주의 연쇄: 아군 전체 -4, 근처(5 안) 부대는 추가 -6 (적은 +4)
     for (const o of this.groups) if (!o.b.out) o.mor = o.side === g.side ? Math.max(0, o.mor - 3 - (Math.hypot(o.x - g.x, o.y - g.y) < 5 ? 4 : 0)) : Math.min(100, o.mor + 3);
-    if (g.actor && FUI.stage) { FUI.stage.play(g.actor, "die"); FUI.stage.fadeOut(g.actor, 1100); Sound.charSfx(g.b.code, "die"); }
+    if (g.actor && FUI.stage) { FUI.stage.play(g.actor, "die"); if (g.actor.sd) g.actor.sd.speed = 1.5; FUI.stage.fadeOut(g.actor, 1100); Sound.charSfx(g.b.code, "die"); }
     this.say(`${g.b.gname ? g.b.gname + " " : ""}${g.b.name} 부대 괴멸!${g.b.lord ? " (군주)" : ""}`, "war"); FUI.bubble(this, g, "괴멸!", g.side === this.mySide ? "bad" : "good");
     // 배너는 아군 장수·적 총대장의 패주에만 (전장 한가운데를 자주 가리지 않게)
     // 총대장이 쓰러지는 순간: 잠깐 느려지며 카메라가 그쪽을 비춘다
@@ -702,7 +706,7 @@ const Field = {
   fire(g, sk, tg) {
     if (g.b.out || this.finished) return;
     const fx = FUI.stage, p = 1 + Math.max(g.b.st.war, g.b.st.int || 0) / 150, col = g.side === "atk" ? 0x9fd6ff : 0xffb38a;
-    if (g.actor && fx) fx.play(g.actor, "skill");
+    if (g.actor && fx) { this.gAnim(g, "skill"); if (tg && typeof tg.x === "number" && Math.abs(tg.x - g.x) > 0.15) fx.setFace(g.actor, tg.x > g.x ? 1 : -1); }
     if (!this.sim && !Sound.charSfx(g.b.code, "s2")) Sound.sfx("beam", 0.7);
     const E = sk.E || { debuffs: [] };
     // 처치 상한: 한 번의 무장기로 쓰러뜨리는 병사 수 (넘으면 병사에게는 더 피해가 없다. 장수 피해는 그대로)
@@ -785,7 +789,7 @@ const Field = {
   revive(s, ag) {
     s.alive = true; s.revived = true; s.hp = FLD.SOLDIER_HP * (ag.ps || 1) * 0.5; s.cool = 0.5; // 재기한 병사는 체력 절반으로 돌아온다
     const fx = FUI.stage;
-    if (fx && this.frames[this.soldierCode(ag.b)]) { if (s.spr) fx.removeSprite(s.spr); s.spr = fx.addSprite(this.frames[this.soldierCode(ag.b)], s.x, s.y, 0.95 * this.depth(s.y), ag.dir); s.spr.team = FLD_TEAM[ag.side]; s.spr.teamDisc = ag.sq; }
+    if (fx && this.frames[this.soldierCode(ag.b)]) { if (s.spr) fx.removeSprite(s.spr); s.spr = fx.addSprite(this.frames[this.soldierCode(ag.b)], s.x, s.y, 0.95 * this.depth(s.y), ag.dir); s.spr.team = FLD_TEAM[ag.side]; s.spr.teamDisc = ag.sq; s.spr.rise = 0.4; }
   },
   blast(g, x, y, R, dS, dG, col, big, ctx) {
     const fx = FUI.stage;
@@ -818,7 +822,7 @@ const Field = {
       const v = dG * mul * this.genK(tg) * this.wallMul(tg, tg.side);
       tg.hp = Math.max(0, tg.hp - v); this.genHit(tg, v);
       FUI.pop(this, tg.x, tg.y + 1.7, Math.round(v), "crit");
-      if (tg.actor && FUI.stage) FUI.stage.play(tg.actor, "hit");
+      if (tg.actor && FUI.stage) { if (this.t - (tg.hitAnimT || -9) > 0.8 && !(tg.actor.sd && (tg.actor.sd.clipName === "atk" || tg.actor.sd.clipName === "skill"))) { tg.hitAnimT = this.t; this.gAnim(tg, "hit"); } else tg.actor.shake = 0.25; } // 무장기·공격 동작을 끊지 않는다 (대신 흔들림)
       if (o.stun) { if (tg.b.trait === "immune") FUI.pop(this, tg.x, tg.y + 2.1, "면역", "txt"); else tg.stun = Math.max(tg.stun, o.stun); } // 철충 기절 면역
     }
   },
@@ -1483,9 +1487,25 @@ const FUI = {
         if (g.sq) el.style.setProperty("--sq", `rgb(${g.sq.map((v) => Math.min(255, Math.round(v * 0.5 * 255 + 40))).join(",")})`);
       }
       if (g.actor && g.actor.sd && !g.b.out) {
-        const c = g.actor.sd, mv = g._ax == null ? 0 : Math.hypot(g.x - g._ax, g.y - g._ay) / Math.max(0.001, real * (this.stage.timeScale || 0.0001));
-        g._ax = g.x; g._ay = g.y; g._mv = (g._mv || 0) * 0.7 + mv * 0.3;
-        if ((c.clipName === "idle" || c.clipName === "move") && this.stage.timeScale > 0) { const want = g._mv > 0.35 && c.has("move") ? "move" : "idle"; if (c.clipName !== want) c.play(want, null, true); }
+        const c = g.actor.sd, ts = this.stage.timeScale == null ? 1 : this.stage.timeScale, gd = real * ts;
+        if (gd > 0 && g._ax != null) { const vx = (g.x - g._ax) / gd, vy = (g.y - g._ay) / gd; g._vx = (g._vx || 0) * 0.7 + vx * 0.3; g._mv = (g._mv || 0) * 0.7 + Math.hypot(vx, vy) * 0.3; }
+        g._ax = g.x; g._ay = g.y;
+        if (gd > 0) {
+          const nm = c.clipName, ref = (g.S && g.S.spd) || 1.5, moving = (g._mv || 0) > (nm === "move" ? 0.25 : 0.45);
+          // 걷기/대기: 실제 속도로 · 움직이는 중에 공격·피격 동작이 반 넘게 지났으면 걷기로 (공격 자세로 미끄러지지 않게)
+          if (nm === "idle" || nm === "move" || (moving && (nm === "atk" || nm === "hit") && c.clip && c.time > c.clip.dur * 0.5)) {
+            const want = moving && c.has("move") ? "move" : "idle";
+            if (nm !== want) c.play(want, null, true);
+            c.speed = want === "move" ? Math.max(0.7, Math.min(1.6, g._mv / ref)) : 1;
+          }
+          // 바라보는 쪽: 달릴 때는 가는 쪽, 서 있으면 가장 가까운 적 — 0.25초 넘게 같은 쪽을 원할 때만 돌아선다 (공격·무장기 중에는 그대로)
+          if (c.clipName !== "atk" && c.clipName !== "skill") {
+            let want = 0;
+            if (g._mv > 0.6 && Math.abs(g._vx) > 0.4) want = g._vx > 0 ? 1 : -1;
+            else { let best = null, bd = 1e9; for (const o of F_.groups) if (o.side !== g.side && !o.b.out && o.hp > 0) { const d = Math.abs(o.x - g.x) + Math.abs(o.y - g.y); if (d < bd) { bd = d; best = o; } } if (best && Math.abs(best.x - g.x) > 0.3) want = best.x > g.x ? 1 : -1; }
+            if (want && want !== g.actor.face) { g._faceT = (g._faceT || 0) + gd; if (g._faceT > 0.25) { this.stage.setFace(g.actor, want); g._faceT = 0; } } else g._faceT = 0;
+          }
+        }
       }
       // 발밑 고리: 부대색(아군은 푸른 계열 · 적은 붉은 계열) · 선택한 장수는 금색으로 맥동 (병사 무리 속에서도 장수가 어디 있는지 보이게)
       let rg = this.rings.get(g);
