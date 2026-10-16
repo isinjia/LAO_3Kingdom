@@ -47,7 +47,7 @@ const Stage = (() => {
   function loop(t) {
     requestAnimationFrame(loop);
     const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
-    for (const s of stages) s.tick(dt);
+    for (const s of stages) if (!s.manual) s.tick(dt); // manual: 주인 루프가 직접 그린다 (야전 — 갱신 직후에 그려야 라벨과 맞는다)
   }
   requestAnimationFrame(loop);
 

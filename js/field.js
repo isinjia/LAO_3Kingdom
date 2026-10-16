@@ -156,7 +156,7 @@ const Field = {
     for (const s of ["atk", "def"]) for (const q of this.bonus[s]) this.say(`부대 결속 — ${q.name} ×${q.n}: 공격력 +${Math.round((q.mult - 1) * 100)}%`, "hot");
     const lead = all.find((b) => b.side === this.mySide && !b.generic);
     if (lead) Sound.voice(lead.code, "SortiePick", ["StageStart", "BattleFocus"]);
-    UI.banner("개전!", `${FORMS[myF].n} vs ${FORMS[foF].n}`, 1300);
+    UI.banner("개전!", `${FORMS[myF].n} vs ${FORMS[foF].n} · 적 총대장(★)을 쓰러뜨리거나 적군을 무너뜨리면 승리`, 1800);
     Sound.sfx("start");
     this.busy = true; this.last = performance.now();
     this.loop = this.loop.bind(this); requestAnimationFrame(this.loop);
@@ -276,7 +276,8 @@ const Field = {
 
   // ── 메인 루프 (실시간: 0.05초 단위로 나눠 진행 — 배속이 높아도 충돌 판정이 빠지지 않는다) ──
   loop(now) {
-    if (this.finished) return;
+    // 끝난 뒤에도 화면이 닫힐 때까지 그림은 계속 그린다 (승리 동작·흩어지는 병사가 멈추지 않게)
+    if (this.finished) { if (FUI.stage) { const r = Math.min(0.05, Math.max(0, (now - this.last) / 1000)); this.last = now; FUI.stage.timeScale = 1; FUI.stage.tick(r); requestAnimationFrame(this.loop); } return; }
     // 한 프레임 최대 0.25초까지 따라잡는다 (4fps까지는 게임 시간이 느려지지 않는다. 진행은 0.05초 단위로 나눈다)
     const real = Math.min(0.25, Math.max(0, (now - this.last) / 1000)); this.last = now;
     if (this.hitStop > 0) this.hitStop -= real; // 히트스톱: 시간도 애니메이션도 잠깐 멈춘다
@@ -284,6 +285,7 @@ const Field = {
     // slow: 결정적인 순간(총대장 패주)의 슬로모션
     else if (!this.paused && !this.busy) { if (this.slow > 0) this.slow -= real; let d = real * this.speed * (this.slow > 0 ? 0.3 : 1); while (d > 1e-4 && !this.finished && !this.busy && this.freeze <= 0) { const s = Math.min(0.05, d); try { this.step(s); } catch (e) { if (!this.stepErr) { this.stepErr = true; console.error(e); this.say("전투 처리 중 오류가 났다 — 계속 진행한다", "war"); } } d -= s; } } // 한 스텝의 예외가 전투 루프를 멈추지 않게
     FUI.frame(this, real);
+    if (FUI.stage) FUI.stage.tick(Math.min(0.05, real)); // 갱신·카메라를 맞춘 바로 뒤에 그린다
     requestAnimationFrame(this.loop);
   },
 
@@ -362,7 +364,7 @@ const Field = {
       if (g.actor) { g.actor.x = g.x; g.actor.y = g.y; if (g.actor.sd) g.actor.sd.setOrder(20 + Math.round(-g.y * 10)); }
       // 무장기 (AI · 자동)
       if (g.mpMax && g.hp > 0 && this.t >= g.aiSk && (!this.ctrl(g.b) || this.autoSkill || (this.skillAssist && g !== this.sel))) { g.aiSk = this.t + 0.6; this.aiSkill(g); }
-      // 보조 모드에서 선택한 장수: 기력이 가득 찬 채 15초가 지나면 알아서 쓴다 (기력이 넘쳐 버려지지 않게)
+      // 보조 모드에서 선택한 장수: 기력이 가득 찬 채 5초가 지나면 알아서 쓴다 (기력이 넘쳐 버려지지 않게)
       else if (g.mpMax && g.hp > 0 && this.skillAssist && !this.autoSkill && g === this.sel) { g.fullT = g.mp >= g.mpMax - 0.5 ? (g.fullT || 0) + dt : 0; if (g.fullT > 5 && this.t >= g.aiSk) { g.aiSk = this.t + 0.6; this.aiSkill(g, true); } /* 대무장기는 직접 쓰도록 남긴다 */ }
       // 병사: 사거리 안의 적을 치고, 조금 앞(목줄 안)의 적에게는 한두 걸음 나서며, 아니면 진형 자리로 돌아간다
       const leash = g.S.melee ? 0.9 : 0.45; // 짧은 목줄: 맞붙어도 진형 모양이 남는다
@@ -381,7 +383,8 @@ const Field = {
           else this.anim(s, "idle");
           if (s.cool <= 0) this.attack(g, s, tgt, false);
         }
-        else if (tgt && Math.hypot(s.x - hx, s.y - hy) < leash + 0.6) { this.moveToward(s, tgt.x - g.dir * Math.min(sReach * 0.7, 2.4), tgt.y, spd * dt); this.anim(s, "move"); }
+        // 앞의 적에게 나설 때도 진형의 세로 자리(hy)와 앞뒤 간격을 지킨다 — 맞붙어도 한 줄로 늘어서지 않고 진형 모양이 남는다
+        else if (tgt && Math.hypot(s.x - hx, s.y - hy) < leash + 0.6) { this.moveToward(s, tgt.x - g.dir * Math.min(sReach * 0.7, 2.4) + s.home.x * 0.5, hy, spd * dt); this.anim(s, "move"); }
         else if (Math.hypot(hx - s.x, hy - s.y) > 0.08) { this.moveToward(s, hx, hy, spd * dt * 1.15); this.anim(s, "move"); } else this.anim(s, "idle");
         // 맞닿은 적 병사와는 겹치지 않는다 — 양쪽이 서로 밀어내 맞닿은 자리에 전열이 선다 (적진을 통과하지 못한다)
         if (tgt && tgt.s && tgt.s.alive) { const dx = s.x - tgt.s.x, dy = (s.y - tgt.s.y) * 1.6, L = Math.hypot(dx, dy); if (L < 0.55) { const k = (0.55 - L) * 0.5, ux = L > 0.001 ? dx / L : -g.dir; s.x = Math.max(FLD.X0, Math.min(FLD.X1, s.x + ux * k)); if (s.spr) s.spr.x = s.x; } }
@@ -1289,7 +1292,7 @@ const FUI = {
           h("button", { class: "danger", title: "전투에서 물러남", onclick: () => this.retreatAsk(F_) }, "퇴각"))),
       h("div", { class: "fToast" }));
     // 카메라는 전장(지면 띠)에 맞춘다: 위는 장수 머리·라벨, 아래는 맨 앞줄 발밑까지만 보여 병사가 화면을 채운다
-    this.stage = Stage.ok ? Stage.create(this.$stage, { height: FLD.Y1 - FLD.Y0 + 2.9, camY: (FLD.Y1 + 2.3 + FLD.Y0 - 0.6) / 2 }) : null;
+    this.stage = Stage.ok ? Object.assign(Stage.create(this.$stage, { height: FLD.Y1 - FLD.Y0 + 2.9, camY: (FLD.Y1 + 2.3 + FLD.Y0 - 0.6) / 2 }), { manual: true }) : null; // manual: 야전 루프가 직접 그린다
     this.F = F_; this.labs = new Map(); this.rings = new Map(); this.flags = new Map(); this.$aim = null; this.hoverSk = null; this.aimKey = null; this.$camps = null; this.$zones = null; this.selKey = ""; this.genKey = ""; this.follow = true; this.keys = new Set(); this.camX = 0;
     // 카메라: 드래그로 이동
     let drag = null;
@@ -1583,14 +1586,14 @@ const FUI = {
       const cur = F_.units[s].reduce((a, b) => a + (b.out && !(routing && b.withdrawn) ? 0 : b.troops), 0), max = F_.units[s].reduce((a, b) => a + b.max, 0) || 1;
       const al = F_.alive(s), mor = al.length ? Math.round(al.reduce((a, g) => a + g.mor, 0) / al.length) : 0;
       const box = head.querySelector(".fSide." + s); box.querySelector(".fBar i").style.width = `${(cur / max) * 100}%`; const mb = box.querySelector(".fMorBar"); if (mb) { mb.firstChild.style.width = `${mor}%`; mb.classList.toggle("low", mor < 35); } const ct = F_.collapseT && F_.collapseT[s], cd = ct != null && mor < 30 && !(F_.routing && F_.routing.s !== s) ? Math.max(0, Math.ceil(FLD.COLLAPSE_T - (F_.t - ct))) : null; // 총붕괴 뒤 퇴각까지 남은 초 (사기 30 이상으로 회복하면 멈춘다)
-      box.querySelector("small").textContent = routing ? `퇴각 중 — ${fmt(cur)}명이 물러난다` : (cur <= 0 && al.some((g) => !g.b.generic && g.hp > 0) ? `병사 전멸 — 장수만 남았다 · 사기 ${mor}` : `${fmt(cur)} / ${fmt(max)} · 사기 ${mor}`) + (cd != null ? ` · 총붕괴! 퇴각까지 ${cd}초` : "");
+      box.querySelector("small").textContent = routing ? (cur > 0 ? `퇴각 중 — ${fmt(cur)}명이 물러난다` : "퇴각 중 — 장수만 물러난다") : (cur <= 0 && al.some((g) => !g.b.generic && g.hp > 0) ? `병사 전멸 — 장수만 남았다 · 사기 ${mor}` : `${fmt(cur)} / ${fmt(max)} · 사기 ${mor}`) + (cd != null ? ` · 총붕괴! 퇴각까지 ${cd}초` : "");
       box.classList.toggle("collapse", cd != null);
     }
     // 시계: 총공세 전에는 총공세까지, 뒤에는 제한 시간까지 남은 시간 (다음 고비가 언제인지 보이게)
     // (고비 20초 전부터만 남은 시간을 센다. 그 밖에는 전투가 흐른 시간)
     // (시계는 늘 흐른 시간. 다음 고비는 앞의 작은 글자로 — 「총공세 0:23 뒤」·「판정 1:10 뒤」)
-    const nx = Math.max(0, Math.ceil((F_.surge ? FLD.TIME : FLD.SURGE) - F_.t)), ph = `${F_.surge ? "판정" : "총공세"} ${Math.floor(nx / 60)}:${String(nx % 60).padStart(2, "0")} 뒤`, left = Math.floor(F_.t), near = nx <= 20; const tm = head.querySelector(".fTime");
-    tm.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`; if (tm.dataset.ph !== ph) tm.dataset.ph = ph; tm.classList.toggle("low", F_.surge && near);
+    const nx = Math.max(0, Math.ceil((F_.surge ? FLD.TIME : FLD.SURGE) - F_.t)); let ph = `${F_.surge ? "판정" : "총공세"} ${Math.floor(nx / 60)}:${String(nx % 60).padStart(2, "0")} 뒤`; const left = Math.floor(F_.t), near = nx <= 20; const tm = head.querySelector(".fTime");
+    tm.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`; if (F_.finished) ph = ""; if (tm.dataset.ph !== ph) tm.dataset.ph = ph; tm.classList.toggle("low", F_.surge && near);
     this.drawMap(F_);
     this.drawSel(F_);
     this.drawGens(F_);
@@ -1699,7 +1702,7 @@ const FUI = {
     this.floats.push({ x, y, until: now + life }); return { x, y };
   },
   pop(F_, x, y, v, kind) { if (!this.stage || F_.sim) return; const fl = this.$stage.querySelector(".fFloat"); const p = this.floatAt(this.stage.toScreen(x, y).x, this.stage.toScreen(x, y).y, 700); if (!p) return; const el = h("div", { class: "fPop " + (kind || ""), style: `left:${p.x}px;top:${p.y}px` }, typeof v === "number" ? `-${v}` : v); fl.append(el); setTimeout(() => el.remove(), 1000); },
-  skName(F_, g, name, big) { if (!this.stage) return; const fl = this.$stage.querySelector(".fFloat"); const q = this.stage.toScreen(g.x, g.y + 2.4), p = this.floatAt(q.x, q.y, 1100) || q; const el = h("div", { class: "fSkName " + (g.side === F_.mySide ? "me" : "foe") + (big ? " big" : ""), style: `left:${p.x}px;top:${p.y}px` }, `「${name}」`); fl.append(el); setTimeout(() => el.remove(), 1400); },
+  skName(F_, g, name, big) { if (!this.stage) return; const nowS = performance.now(); if (g._skNameT && nowS - g._skNameT < 1000) return; g._skNameT = nowS; /* 장수마다 1초에 하나 */ const fl = this.$stage.querySelector(".fFloat"); const q = this.stage.toScreen(g.x, g.y + 2.4), p = this.floatAt(q.x, q.y, 1100) || q; const el = h("div", { class: "fSkName " + (g.side === F_.mySide ? "me" : "foe") + (big ? " big" : ""), style: `left:${p.x}px;top:${p.y}px` }, `「${name}」`); fl.append(el); setTimeout(() => el.remove(), 1400); },
   toast(t) { const el = document.querySelector("#field .fToast"); if (!el) return; el.textContent = t; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); },
   flash(color) { const f = this.$stage && this.$stage.querySelector(".fFlash"); if (!f) return; f.style.background = color; f.classList.remove("on"); void f.offsetWidth; f.classList.add("on"); },
   warn(F_, pts, R) {
