@@ -63,7 +63,7 @@ const Stage = (() => {
   const shadowGeo = () => shGeo || (shGeo = new THREE.CircleGeometry(1, 16));
   // 진영 발판: 병사 발밑을 진영색 원반으로 (파랑·빨강) — 같은 리그를 쓰는 양군을 한눈에 가른다
   const teamMats = {};
-  const teamMat = (c) => { const key = c.join(","); return teamMats[key] || (teamMats[key] = new THREE.MeshBasicMaterial({ color: new THREE.Color(Math.min(1, c[0] * 0.55), Math.min(1, c[1] * 0.55), Math.min(1, c[2] * 0.55)), transparent: true, opacity: 0.55, depthTest: false, depthWrite: false })); };
+  const teamMat = (c) => { const key = c.join(","); return teamMats[key] || (teamMats[key] = new THREE.MeshBasicMaterial({ color: new THREE.Color(Math.min(1, c[0] * 0.55), Math.min(1, c[1] * 0.55), Math.min(1, c[2] * 0.55)), transparent: true, opacity: 0.85, depthTest: false, depthWrite: false })); }; // (진하게 — 맞붙어도 진영이 보이게)
   const shadowMat = () => shMat ||(shMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthTest: false, depthWrite: false }));
 
   // 리그 하나를 이동·공격 프레임 이미지로 굽는다 (병사 스프라이트용). 결과는 코드별로 캐시

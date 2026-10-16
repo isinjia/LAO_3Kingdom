@@ -360,7 +360,7 @@ const Field = {
       // 장수는 적 병사 무리를 뚫고 지나가지 못한다: 바로 앞(0.45 안, 같은 줄)에 적 병사가 있으면 그 앞에서 멈춘다 (돌진 무장기는 예외)
       if (!g.b.generic && g.hp > 0 && !g.dash) for (const f of foes) { if (!f.s) continue; const ax = (f.x - g.x) * g.dir; if (ax > 0 && ax < 0.45 && Math.abs(f.y - g.y) < 0.8) { g.x = f.x - g.dir * 0.45; break; } } // (세로 0.8 안 — 옆으로 비켜 돌아가지 못하게)
       // 장수끼리 겹치지 않게 (같은 편이든 적이든 0.9 안이면 세로로 밀어낸다) — 장수 셋이 한 자리에 포개져 라벨 탑이 서지 않게
-      if (!g.b.generic && g.hp > 0) for (const o of this.groups) { if (o === g || o.b.generic || o.b.out || o.hp <= 0) continue; const dx = g.x - o.x, dy = (g.y - o.y) * 1.6, L = Math.hypot(dx, dy); if (L < 0.9) { const push = (0.9 - L) * 0.5, sy = dy === 0 ? (g.side === "atk" ? 1 : -1) : Math.sign(dy); g.y = Math.max(FLD.Y0, Math.min(FLD.Y1, g.y + sy * push * 0.7)); g.x += (dx === 0 ? -g.dir : Math.sign(dx)) * push * 0.3; } }
+      if (!g.b.generic && g.hp > 0) for (const o of this.groups) { if (o === g || o.b.generic || o.b.out || o.hp <= 0) continue; const dx = g.x - o.x, dy = (g.y - o.y) * 1.6, L = Math.hypot(dx, dy); if (L < 1.3) { const push = (1.3 - L) * 0.5, sy = dy === 0 ? (g.side === "atk" ? 1 : -1) : Math.sign(dy); g.y = Math.max(FLD.Y0, Math.min(FLD.Y1, g.y + sy * push * 0.7)); g.x += (dx === 0 ? -g.dir : Math.sign(dx)) * push * 0.3; } }
       if (g.actor) { g.actor.x = g.x; g.actor.y = g.y; if (g.actor.sd) g.actor.sd.setOrder(20 + Math.round(-g.y * 10)); }
       // 무장기 (AI · 자동)
       if (g.mpMax && g.hp > 0 && this.t >= g.aiSk && (!this.ctrl(g.b) || this.autoSkill || (this.skillAssist && g !== this.sel))) { g.aiSk = this.t + 0.6; this.aiSkill(g); }
@@ -414,7 +414,7 @@ const Field = {
     if (this.t - this.aiT >= 1) { this.aiT = this.t; this.contactCheck(); this.aiCommand(); this.collapseCheck(); }
     // 총공세: FLD.SURGE(75초)가 지나면 양군 모두 사생결단 (주는 피해 ×FLD.SURGE_K, 총대장도 앞으로 나선다)
     // 총공세: 60초가 되거나, 접전 뒤 전체 병사의 40%가 쓰러지면 (판이 기울기 전에 고비가 온다)
-    if (!this.surge && this.contact && this.t >= 20 && this.t - (this.lossChkT || 0) >= 1) { this.lossChkT = this.t; let n0 = 0, live = 0; for (const o of this.groups) { n0 += o.n0; live += o.soldiers.filter((x) => x.alive).length; } if (live <= n0 * 0.6) this.surgeEarly = true; }
+    if (!this.surge && this.contact && this.t >= 20 && this.t - (this.lossChkT || 0) >= 1) { this.lossChkT = this.t; let n0 = 0, live = 0; for (const o of this.groups) { n0 += o.n0; live += o.soldiers.filter((x) => x.alive).length; } if (live <= n0 * 0.45) this.surgeEarly = true; /* 병사 55%가 쓰러지면 */ }
     if (!this.surge && (this.t >= FLD.SURGE || this.surgeEarly)) { this.surge = true; const pc = Math.round((FLD.SURGE_K - 1) * 100); this.say(`총공세! 양군이 사생결단으로 맞붙는다 — 주는 피해 +${pc}%, 총대장도 나선다`, "hot key"); if (!this.sim) UI.banner("총공세", `남은 시간 ${FLD.TIME - FLD.SURGE}초 — 주는 피해 +${pc}%`, 1100); }
     this.duelCheck(dt);
     this.checkEnd();
@@ -852,6 +852,7 @@ const Field = {
   // ── 일기토: 장수끼리 맞닥뜨리면 한쪽이 신청한다. 「장수 돌격」 중인 장수는 더 넓은 거리에서 더 자주 신청한다 ──
   duelCheck(dt) {
     if (this.duelCd > 0) { this.duelCd -= dt; return; }
+    if (!this.sim && FUI.ask) return; // 답을 기다리는 일기토 알림이 있으면 새로 걸지 않는다 (기다리는 알림을 덮어쓰지 않게)
     const gens = this.groups.filter((g) => !g.b.out && !g.b.generic && g.hp > 0 && !g.dash);
     for (const a of gens) for (const b of gens) {
       if (a.side === b.side) continue;
@@ -1120,7 +1121,7 @@ const Field = {
       const why = s === "atk" ? "공격군 총붕괴 — 퇴각했다" : "수비군 총붕괴 — 거점을 버리고 퇴각했다";
       if (this.sim) { for (const g of al) { for (const x of g.soldiers) if (x.alive) { x.alive = false; x.wd = true; } g.b.out = true; g.b.withdrawn = true; } return this.finish(s === "def", why); }
       const foeG = this.alive(s === "atk" ? "def" : "atk")[0];
-      for (const g of al) { for (const x of g.soldiers) if (x.alive) { if (Math.random() < 0.15) this.killSoldier(x, foeG); else { x.alive = false; x.wd = true; x.flee = 3; if (x.spr) { x.spr.noFall = true; x.spr.idle = false; if (FUI.stage) FUI.stage.spriteAnim(x.spr, "move"); } } } this.setCmd(g, "retreat"); g.b.out = true; g.b.withdrawn = !this.isLead(g); if (g.actor && FUI.stage) FUI.stage.fadeOut(g.actor, 2500); } // (무너진 군의 총대장은 철수가 아니라 패주 — 격파·포로 대상)
+      for (const g of al) { for (const x of g.soldiers) if (x.alive) { if (Math.random() < 0.3) this.killSoldier(x, foeG); else { x.alive = false; x.wd = true; x.flee = 3; if (x.spr) { x.spr.noFall = true; x.spr.idle = false; if (FUI.stage) FUI.stage.spriteAnim(x.spr, "move"); } } } this.setCmd(g, "retreat"); g.b.out = true; g.b.withdrawn = !this.isLead(g); if (g.actor && FUI.stage) FUI.stage.fadeOut(g.actor, 2500); } // (무너진 군의 총대장은 철수가 아니라 패주 — 격파·포로 대상)
       this.routing = { s, t0: this.t, why };
       const cx = al.reduce((a, g) => a + g.x, 0) / Math.max(1, al.length);
       if (FUI.stage) { FUI.setFollow(false); FUI.camX = cx; }
@@ -1650,7 +1651,7 @@ const FUI = {
       const c = box.children[i]; if (!c) return;
       c.querySelector(".fHp i").style.width = `${(g.hp / g.hpMax) * 100}%`; c.querySelector(".fMp i").style.width = `${(g.mp / g.mpMax) * 100}%`;
       c.querySelector("small").textContent = g.b.out ? "패주" : `${FLD_CMD[g.cmd].s} · 병 ${g.soldiers.filter((s) => s.alive).length}`;
-      c.classList.toggle("ready", !g.b.out && g.skills.some((s) => g.mp >= s.cost)); c.classList.toggle("out", g.b.out); c.classList.toggle("sel", F_.sel === g); c.classList.toggle("ai", F_.assisted(g)); c.oncontextmenu = (ev) => { ev.preventDefault(); if (!F_.canOrder(g)) return; g.ordered = !F_.assisted(g) ? false : true; if (g.ordered) g.ordT = F_.t; F_.say(`${g.b.name}: ${g.ordered ? "직접 지휘" : "보조 AI에 맡긴다"}`, "hot"); Sound.sfx("click", 0.4); };
+      c.classList.toggle("ready", !g.b.out && g.skills.some((s) => g.mp >= s.cost)); c.classList.toggle("out", g.b.out); c.classList.toggle("sel", F_.sel === g); c.classList.toggle("ai", F_.assisted(g)); if (!c.oncontextmenu) c.oncontextmenu = (ev) => { ev.preventDefault(); if (!F_.canOrder(g)) return; g.ordered = !F_.assisted(g) ? false : true; if (g.ordered) g.ordT = F_.t; F_.say(`${g.b.name}: ${g.ordered ? "직접 지휘" : "보조 AI에 맡긴다"}`, "hot"); Sound.sfx("click", 0.4); };
       c.disabled = g.b.out || !F_.ctrl(g.b);
     });
   },
