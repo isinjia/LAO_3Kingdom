@@ -387,7 +387,7 @@ const Field = {
         else if (tgt && Math.hypot(s.x - hx, s.y - hy) < leash + 0.6) { this.moveToward(s, tgt.x - g.dir * Math.min(sReach * 0.7, 2.4) + s.home.x * 0.5, hy, spd * dt); }
         else { const dd = Math.hypot(hx - s.x, hy - s.y); if (dd > 0.08) this.moveToward(s, hx, hy, spd * dt * 1.15); } /* 자리 보정 같은 작은 움직임은 대기 자세로 (걷기·대기가 번갈아 다리가 깜빡이지 않게) */
         // 걷기/대기는 실제로 움직인 속도로 고른다 (빠르면 걸음도 빠르게. 자리 보정 같은 작은 움직임은 대기)
-        { const v = Math.hypot(s.x - px, (s.y - py) / 0.7) / Math.max(1e-4, dt); s.mv = (s.mv || 0) * 0.75 + v * 0.25; const walk = s.spr && s.spr.anim === "move" ? s.mv > spd * 0.2 : s.mv > spd * 0.4; this.anim(s, walk ? "move" : "idle"); if (s.spr) s.spr.rate = Math.max(0.6, Math.min(1.4, s.mv / spd)); }
+        { const v = Math.hypot(s.x - px, (s.y - py) / 0.7) / Math.max(1e-4, dt); s.mv = (s.mv || 0) * 0.75 + v * 0.25; const walk = s.spr && s.spr.anim === "move" ? s.mv > spd * 0.2 : s.mv > spd * 0.4; if ((s.spr && s.spr.idle !== !walk && this.t - (s.animT || -9) > 0.35) || (s.spr && s.spr.idle == null)) { s.animT = this.t; this.anim(s, walk ? "move" : "idle"); } /* 걷기/대기는 0.35초는 유지 */ if (s.spr) s.spr.rate = Math.max(0.6, Math.min(1.4, s.mv / spd)); }
         // 맞닿은 적 병사와는 겹치지 않는다 — 양쪽이 서로 밀어내 맞닿은 자리에 전열이 선다 (적진을 통과하지 못한다)
         if (tgt && tgt.s && tgt.s.alive) { const dx = s.x - tgt.s.x, dy = (s.y - tgt.s.y) * 1.6, L = Math.hypot(dx, dy); if (L < 0.55) { const k = (0.55 - L) * 0.5, ux = L > 0.001 ? dx / L : -g.dir; s.x = Math.max(FLD.X0, Math.min(FLD.X1, s.x + ux * k)); if (s.spr) s.spr.x = s.x; } }
       }
@@ -462,7 +462,7 @@ const Field = {
   },
   // idle 표시를 남겨 두면 공격 동작이 끝난 뒤 제자리 걸음이 아니라 대기 자세로 돌아간다
   // 장수 한 번짜리 동작: 원본 동작이 3~13초로 길어 실제 공격 간격에 맞춰 빠르게 튼다
-  gAnim(g, name) { const fx = FUI.stage; if (!fx || !g.actor) return; fx.play(g.actor, name); const c = g.actor.sd, T = { atk: 0.75, skill: 1.4, hit: 0.45 }[name]; if (c && c.clip && T) c.speed = Math.max(1, c.clip.dur / T); },
+  gAnim(g, name) { const fx = FUI.stage; if (!fx || !g.actor) return; fx.play(g.actor, name); g.gAnimT = this.t; const c = g.actor.sd, T = { atk: 0.85, skill: 1.5, hit: 0.45 }[name]; if (c && c.clip && T) { const d = c.clip.dur; c.speed = Math.max(1, Math.min(2.5, d / T)); const w = T * c.speed; if (w < d * 0.98) { c.time = Math.max(0, d * 0.45 - w * 0.45); c.until = c.time + w; } } }, // 2.5배 넘게 빨리 감으면 경련처럼 보인다 — 긴 동작은 가운데(타격) 구간만
   anim(s, name) { if (!s.spr || !FUI.stage) return; s.spr.idle = name === "idle"; if (s.spr.anim !== "atk") FUI.stage.spriteAnim(s.spr, name); },
 
   // 피해 배율: 결속 · 진형 · 진형 상성 · 사기 · 강화
@@ -495,7 +495,7 @@ const Field = {
     v *= 0.85 + Math.random() * 0.3;
     const fx = FUI.stage;
     if (fx) {
-      if (isGen && g.actor) { const c = g.actor.sd; if (Math.abs(tgt.x - g.x) > 0.15) fx.setFace(g.actor, tgt.x > g.x ? 1 : -1); /* 치는 쪽을 바라본다 */ if (!c || (c.clipName !== "skill" && (c.clipName !== "atk" || (c.clip && c.time > c.clip.dur * 0.6)))) this.gAnim(g, "atk"); /* 공격 동작은 0.75초 — 타격마다 휘두른다 */ if (S.melee) fx.lunge(g.actor, (tgt.x - g.x) * 0.4, 0.35); if (Math.random() < 0.5 && !Sound.charSfx(a.code, "s1")) Sound.sfx(S.melee ? "swing" : "shot", 0.5); }
+      if (isGen && g.actor) { const c = g.actor.sd; if (Math.abs(tgt.x - g.x) > 0.15) fx.setFace(g.actor, tgt.x > g.x ? 1 : -1); /* 치는 쪽을 바라본다 */ if (!c || (c.clipName !== "skill" && (c.clipName !== "atk" || this.t - (g.gAnimT || -9) > 0.5))) this.gAnim(g, "atk"); /* 공격 동작은 0.75초 — 타격마다 휘두른다 */ if (S.melee) fx.lunge(g.actor, (tgt.x - g.x) * 0.4, 0.35); if (Math.random() < 0.5 && !Sound.charSfx(a.code, "s1")) Sound.sfx(S.melee ? "swing" : "shot", 0.5); }
       if (!isGen && who.spr) { fx.spriteAnim(who.spr, "atk", true); who.spr.face = tgt.x > who.x ? 1 : -1; }
       // 사격: 짧은 탄이 날아가 박힌다 (병사 탄은 일부만 그려 화면을 덮지 않게) · 근접: 발밑 흙먼지와 작은 불꽃
       const col = g.side === "atk" ? 0x9fd6ff : 0xffb38a;
@@ -507,7 +507,7 @@ const Field = {
     if (tgt.gen) {
       const k = v * (isGen ? 0.9 : 0.4) * this.genK(tg) * this.wallMul(tg, tg.side);
       tg.hp = Math.max(0, tg.hp - k); this.genHit(tg, k);
-      if (tg.actor && fx && Math.random() < 0.3 && this.t - (tg.hitAnimT || -9) > 1.2 && !(tg.actor.sd && (tg.actor.sd.clipName === "atk" || tg.actor.sd.clipName === "skill"))) { tg.hitAnimT = this.t; this.gAnim(tg, "hit"); fx.knock(tg.actor, Math.sign(tg.x - who.x) || 1, 0.2); }
+      if (tg.actor && fx && (isGen || Math.random() < 0.3) && this.t - (tg.hitAnimT || -9) > (isGen ? 0.7 : 1.2) && !(tg.actor.sd && (tg.actor.sd.clipName === "atk" || tg.actor.sd.clipName === "skill"))) { tg.hitAnimT = this.t; this.gAnim(tg, "hit"); fx.knock(tg.actor, Math.sign(tg.x - who.x) || 1, 0.2); }
       if (isGen) { FUI.pop(this, tg.x, tg.y + 1.6, Math.round(k), "gen"); Sound.sfx("hit", 0.5); }
       if (tg.mpMax) tg.mp = Math.min(tg.mpMax, tg.mp + (isGen ? 1.5 : 0.3)); // 맞은 장수가 기력을 얻는다 (역전의 여지)
     } else {
@@ -1493,7 +1493,7 @@ const FUI = {
         if (gd > 0) {
           const nm = c.clipName, ref = (g.S && g.S.spd) || 1.5, moving = (g._mv || 0) > (nm === "move" ? 0.25 : 0.45);
           // 걷기/대기: 실제 속도로 · 움직이는 중에 공격·피격 동작이 반 넘게 지났으면 걷기로 (공격 자세로 미끄러지지 않게)
-          if (nm === "idle" || nm === "move" || (moving && (nm === "atk" || nm === "hit") && c.clip && c.time > c.clip.dur * 0.5)) {
+          if (nm === "idle" || nm === "move" || (moving && (nm === "atk" || nm === "hit") && F_.t - (g.gAnimT || -9) > 0.4)) {
             const want = moving && c.has("move") ? "move" : "idle";
             if (nm !== want) c.play(want, null, true);
             c.speed = want === "move" ? Math.max(0.7, Math.min(1.6, g._mv / ref)) : 1;
@@ -1501,9 +1501,10 @@ const FUI = {
           // 바라보는 쪽: 달릴 때는 가는 쪽, 서 있으면 가장 가까운 적 — 0.25초 넘게 같은 쪽을 원할 때만 돌아선다 (공격·무장기 중에는 그대로)
           if (c.clipName !== "atk" && c.clipName !== "skill") {
             let want = 0;
-            if (g._mv > 0.6 && Math.abs(g._vx) > 0.4) want = g._vx > 0 ? 1 : -1;
+            const walking = c.clipName === "move";
+            if ((walking && Math.abs(g._vx) > 0.15) || (g._mv > 0.6 && Math.abs(g._vx) > 0.4)) want = g._vx > 0 ? 1 : -1;
             else { let best = null, bd = 1e9; for (const o of F_.groups) if (o.side !== g.side && !o.b.out && o.hp > 0) { const d = Math.abs(o.x - g.x) + Math.abs(o.y - g.y); if (d < bd) { bd = d; best = o; } } if (best && Math.abs(best.x - g.x) > 0.3) want = best.x > g.x ? 1 : -1; }
-            if (want && want !== g.actor.face) { g._faceT = (g._faceT || 0) + gd; if (g._faceT > 0.25) { this.stage.setFace(g.actor, want); g._faceT = 0; } } else g._faceT = 0;
+            if (want && want !== g.actor.face) { g._faceT = (g._faceT || 0) + gd; if (g._faceT > (walking ? 0.1 : 0.25)) { this.stage.setFace(g.actor, want); g._faceT = 0; } } else g._faceT = 0;
           }
         }
       }

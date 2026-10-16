@@ -741,7 +741,7 @@
       this.pinRef = null;
       this.clipName = name;
       this.loop = !!loop;
-      this.time = 0;
+      this.time = 0; this.until = 0; /* until: 이 시각에 끝난 것으로 본다 (긴 동작의 일부만 틀 때) */
       this.onEnd = onEnd || null;
       this.apply();
       if (this.fadeD) this.blend();
@@ -767,7 +767,7 @@
       if (!this.clip) return;
       this.time += dt * this.speed;
       const c = this.clip;
-      if (this.time >= c.dur) {
+      if (this.time >= (this.until || c.dur)) {
         if (this.clipName === 'idle' || this.clipName === 'move' || this.loop || (c.loop && !this.onEnd)) {
           this.time %= c.dur;
         } else {

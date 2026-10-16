@@ -81,7 +81,7 @@ const Stage = (() => {
     const out = { aspect: W / H };
     if (a.sd) {
       for (const [name, n] of [["move", 6], ["atk", 5], ["idle", 4], ["die", 5]]) {
-        const c = a.sd; if (name === "die" && !c.has("die")) continue; // (쓰러짐은 마지막 자세까지 굽는다) const clip = c.has(name) ? name : name === "move" && c.has("idle") ? "idle" : "idle";
+        const c = a.sd; if (name === "die" && !c.has("die")) continue; /* 쓰러짐은 마지막 자세까지 굽는다 */ const clip = c.has(name) ? name : name === "move" && c.has("idle") ? "idle" : "idle";
         c.play(clip, null, true); c.speed = 0; c.fadeD = 0;
         const dur = c.clip ? c.clip.dur : 1; out[name] = [];
         for (let k = 0; k < n; k++) {

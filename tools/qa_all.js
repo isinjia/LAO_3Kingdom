@@ -25,7 +25,7 @@ if (!noshot) steps.push(
   ["audio (덕킹 · 전환 · 효과음)", ["tools/shot.mjs", "tools/audio_check.json", tmp], (r) => { const db = +((r.out.match(/\((-?[\d.]+)dB\)/) || [])[1]); const fin = +((r.out.match(/fadeIn=(\d+)ms/) || [])[1]); return /restored=true/.test(r.out) && /ok=true/.test(r.out) && /SFX playing=true/.test(r.out) && /AMB amb_wind vol=[\d.]+ stopped=true ok=true/.test(r.out) && db <= -6 && db >= -10 && fin <= 6000; }, (r) => evals(r.out)],
   ["해상도 1280×720", ["tools/shot.mjs", "tools/smoke_res.json", tmp], (r) => /hdrOverflow=false docScroll=false overflowEls=0/.test(r.out) && /modal \d+,\d+ \/ 720/.test(r.out), (r) => evals(r.out), { W: "1280", H: "720" }],
   ["해상도 1920×1080", ["tools/shot.mjs", "tools/smoke_res.json", tmp], (r) => /hdrOverflow=false docScroll=false overflowEls=0/.test(r.out), (r) => evals(r.out), { W: "1920", H: "1080" }],
-  ["야전 (개전 · 무장기 · 결과 · 복귀)", ["tools/shot.mjs", "tools/smoke_field.json", tmp], (r) => /prep true/.test(r.out) && /cast true/.test(r.out) && /RESULT VICTORY/.test(r.out) && /done=1 fieldOpen=false/.test(r.out), (r) => evals(r.out)],
+  ["야전 (개전 · 무장기 · 결과 · 복귀)", ["tools/shot.mjs", "tools/smoke_field.json", tmp], (r) => /prep true/.test(r.out) && /bake ok=true/.test(r.out) && /cast true/.test(r.out) && /RESULT VICTORY/.test(r.out) && /done=1 fieldOpen=false/.test(r.out), (r) => evals(r.out)],
   ["smoke (독립 후 노선 · 엔딩)", ["tools/shot.mjs", "tools/smoke_end.json", tmp], (r) => /새 세력의 노선/.test(r.out) && /routeLine=함께 살아/.test(r.out), (r) => evals(r.out)],
 );
 let fail = 0;

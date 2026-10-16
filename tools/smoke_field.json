@@ -16,6 +16,9 @@
   "eval": "document.querySelector('.formCard.rec').click(); const t0=Date.now(); while (Date.now()-t0<60000 && (!Field.groups || !Field.groups.length || Field.busy)) await new Promise(r=>setTimeout(r,250)); return 'started ' + (Date.now()-t0) + 'ms · groups ' + Field.groups.length + ' · soldiers ' + Field.groups.reduce((a,g)=>a+g.soldiers.length,0) + ' · forms ' + JSON.stringify(Field.form) + ' · skills ' + Field.sel.skills.map(s=>s.n+'/'+s.cost).join(',');"
  },
  {
+  "eval": "const fr=Object.values(Field.frames||{}); return 'bake ok=' + (fr.length>0 && fr.every(f=>f && f.move.length>=6 && f.idle.length>=4)) + ' sets=' + fr.length;"
+ },
+ {
   "wait": 7000
  },
  {
