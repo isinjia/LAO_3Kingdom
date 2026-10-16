@@ -385,7 +385,7 @@ const Field = {
         }
         // 앞의 적에게 나설 때도 진형의 세로 자리(hy)와 앞뒤 간격을 지킨다 — 맞붙어도 한 줄로 늘어서지 않고 진형 모양이 남는다
         else if (tgt && Math.hypot(s.x - hx, s.y - hy) < leash + 0.6) { this.moveToward(s, tgt.x - g.dir * Math.min(sReach * 0.7, 2.4) + s.home.x * 0.5, hy, spd * dt); this.anim(s, "move"); }
-        else if (Math.hypot(hx - s.x, hy - s.y) > 0.08) { this.moveToward(s, hx, hy, spd * dt * 1.15); this.anim(s, "move"); } else this.anim(s, "idle");
+        else { const dd = Math.hypot(hx - s.x, hy - s.y); if (dd > 0.08) this.moveToward(s, hx, hy, spd * dt * 1.15); this.anim(s, dd > 0.25 ? "move" : "idle"); } /* 자리 보정 같은 작은 움직임은 대기 자세로 (걷기·대기가 번갈아 다리가 깜빡이지 않게) */
         // 맞닿은 적 병사와는 겹치지 않는다 — 양쪽이 서로 밀어내 맞닿은 자리에 전열이 선다 (적진을 통과하지 못한다)
         if (tgt && tgt.s && tgt.s.alive) { const dx = s.x - tgt.s.x, dy = (s.y - tgt.s.y) * 1.6, L = Math.hypot(dx, dy); if (L < 0.55) { const k = (0.55 - L) * 0.5, ux = L > 0.001 ? dx / L : -g.dir; s.x = Math.max(FLD.X0, Math.min(FLD.X1, s.x + ux * k)); if (s.spr) s.spr.x = s.x; } }
       }
