@@ -19,7 +19,7 @@
   "shot": "smoke_02_main"
  },
  {
-  "eval": "G.year=5; G.month=10; G.queue.length=0; endMonth(); const q=G.queue.map(e=>e.type+(e.bg?':'+e.bg:'')).join(','); UI.flush(); return q;"
+  "eval": "G.year=5; G.month=10; G.queue.length=0; endMonth(); for (let i=G.queue.length-1;i>=0;i--) if (G.queue[i].type==='battle') G.queue.splice(i,1); const q=G.queue.map(e=>e.type+(e.bg?':'+e.bg:'')).join(','); UI.flush(); return q;"
  },
  {
   "wait": 2500

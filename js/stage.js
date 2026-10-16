@@ -55,6 +55,16 @@ const Stage = (() => {
   const texCache = new WeakMap();
   const texOf = (cv) => { let t = texCache.get(cv); if (!t) { t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; texCache.set(cv, t); } return t; };
   let geo = null; const spriteGeo = () => geo || (geo = new THREE.PlaneGeometry(1, 1));
+  // 부드러운 빛 무늬(가운데 밝고 바깥으로 사라지는 원) — 폭발·불티·빛무리가 함께 쓴다
+  let glowT = null;
+  const glowTex = () => glowT || (glowT = (() => { const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d"); const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.22, "rgba(255,255,255,.85)"); gr.addColorStop(0.55, "rgba(255,255,255,.22)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })());
+  let rGeo = null; const ringGeo = () => rGeo || (rGeo = new THREE.RingGeometry(0.9, 1, 48));
+  let shGeo = null, shMat = null;
+  const shadowGeo = () => shGeo || (shGeo = new THREE.CircleGeometry(1, 16));
+  // 진영 발판: 병사 발밑을 진영색 원반으로 (파랑·빨강) — 같은 리그를 쓰는 양군을 한눈에 가른다
+  const teamMats = {};
+  const teamMat = (c) => { const key = c.join(","); return teamMats[key] || (teamMats[key] = new THREE.MeshBasicMaterial({ color: new THREE.Color(Math.min(1, c[0] * 0.55), Math.min(1, c[1] * 0.55), Math.min(1, c[2] * 0.55)), transparent: true, opacity: 0.55, depthTest: false, depthWrite: false })); };
+  const shadowMat = () => shMat ||(shMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthTest: false, depthWrite: false }));
 
   // 리그 하나를 이동·공격 프레임 이미지로 굽는다 (병사 스프라이트용). 결과는 코드별로 캐시
   const bakeCache = {};
@@ -89,7 +99,7 @@ const Stage = (() => {
   class StageView {
     // el: 캔버스를 붙일 요소. opts.height = 월드 높이(기본 10)
     constructor(el, opts = {}) {
-      this.el = el; this.H = opts.height || 10; this.actors = []; this.alive = true; this.fx = [];
+      this.el = el; this.H = opts.height || 10; this.camY = opts.camY || 0; this.actors = []; this.alive = true; this.fx = [];
       this.scene = window.THREE ? new THREE.Scene() : null;
       this.camera = window.THREE ? new THREE.OrthographicCamera(-8, 8, 5, -5, -100, 100) : null;
       ensureRenderer();
@@ -111,12 +121,12 @@ const Stage = (() => {
       this.setCam(this.camX || 0);
     }
 
-    // 카메라 가로 이동 (야전의 넓은 전장). x = 화면 중앙의 월드 좌표
+    // 카메라 가로 이동 (야전의 넓은 전장). x = 화면 중앙의 월드 좌표, camY = 화면 세로 중앙(기본 0)
     setCam(x) {
       this.camX = x;
       if (!this.camera) return;
-      const a = this.w / this.h, H = this.H;
-      Object.assign(this.camera, { left: x - (H / 2) * a, right: x + (H / 2) * a, top: H / 2, bottom: -H / 2 });
+      const a = this.w / this.h, H = this.H, cy = this.camY;
+      Object.assign(this.camera, { left: x - (H / 2) * a, right: x + (H / 2) * a, top: cy + H / 2, bottom: cy - H / 2 });
       this.camera.updateProjectionMatrix();
     }
 
@@ -206,11 +216,13 @@ const Stage = (() => {
       s.mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
       s.mesh = new THREE.Mesh(spriteGeo(), s.mat);
       this.scene.add(s.mesh);
+      // 발밑 그림자: 병사가 바닥에 붙어 보이게 (모든 병사가 같은 재질을 나눠 쓴다)
+      s.shadow = new THREE.Mesh(shadowGeo(), shadowMat()); s.shadow.renderOrder = 5; this.scene.add(s.shadow);
       (this.sprites ||= []).push(s);
       return s;
     }
     spriteAnim(s, name, once) { if (!s || s.anim === name && !once) return; s.anim = name; s.fi = 0; s.ft = 0; s.once = !!once; }
-    removeSprite(s) { if (!s || !s.mesh) return; this.scene.remove(s.mesh); s.mat.dispose(); s.mesh = null; s.alive = false; }
+    removeSprite(s) { if (!s || !s.mesh) return; this.scene.remove(s.mesh); if (s.shadow) { this.scene.remove(s.shadow); s.shadow = null; } s.mat.dispose(); s.mesh = null; s.alive = false; }
 
     // 바라보는 방향 전환 (1 = 오른쪽, -1 = 왼쪽). 리그 루트의 좌우 반전과 기준점을 함께 뒤집는다
     setFace(a, f) {
@@ -234,21 +246,34 @@ const Stage = (() => {
     }
     headOf(a) { return this.toScreen(a.x + (a.ox || 0), a.y + (a.oy || 0) + a.h * 1.02); }
 
-    // 간단한 빛 이펙트 (가산 혼합 원)
+    // 폭발·타격 빛: 부드러운 빛무리 + 사방으로 튀는 불티 (큰 것은 얇은 충격파 고리도). 화면이 하얗게 타지 않게 동시 개수를 제한한다
     burst(x, y, color = 0xffd27a, size = 1.2, life = 0.32) {
       if (!this.scene) return;
-      const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthTest: false });
-      const g = new THREE.Mesh(new THREE.RingGeometry(0.35, 1, 32), m);
-      g.position.set(x, y, 0); g.renderOrder = 50; g.scale.set(0.2, 0.2, 1);
-      this.scene.add(g);
-      this.fx.push({ o: g, t: 0, life, size, kind: "burst" });
+      const busy = this.fx.length;
+      if (busy > 220) return;
+      const add = (o, f) => { o.position.set(x, y, 0); this.scene.add(o); this.fx.push(Object.assign({ o, t: 0, shared: true }, f)); };
+      const glowM = new THREE.MeshBasicMaterial({ map: glowTex(), color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false });
+      const gl = new THREE.Mesh(spriteGeo(), glowM); gl.renderOrder = 300;
+      add(gl, { life, size, kind: "glow", peak: busy > 120 ? 0.3 : 0.5 });
+      if (size >= 1.4 && busy < 160) {
+        const rm = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false });
+        const rg = new THREE.Mesh(ringGeo(), rm); rg.renderOrder = 300;
+        add(rg, { life: life * 1.3, size: size * 1.1, kind: "shock" });
+      }
+      const n = busy > 140 ? 0 : Math.round(Math.min(10, 3 + size * 3));
+      for (let i = 0; i < n; i++) {
+        const sm = new THREE.MeshBasicMaterial({ map: glowTex(), color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false });
+        const sp = new THREE.Mesh(spriteGeo(), sm); sp.renderOrder = 301;
+        const a = Math.random() * Math.PI * 2, v = size * (2.2 + Math.random() * 2.6);
+        add(sp, { life: life * (1 + Math.random() * 0.8), kind: "spark", x0: x, y0: y, vx: Math.cos(a) * v, vy: Math.abs(Math.sin(a)) * v * 0.9 + size, r: 0.06 + Math.random() * 0.07 * size });
+      }
     }
     // 떠오르며 사라지는 작은 빛 알갱이 (엔딩 연출)
     sparkle(x, y, color = 0xffb8d8, life = 2.4) {
       if (!this.scene) return;
       const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthTest: false });
       const g = new THREE.Mesh(new THREE.CircleGeometry(0.07 + Math.random() * 0.06, 12), m);
-      g.position.set(x, y, 0); g.renderOrder = 51;
+      g.position.set(x, y, 0); g.renderOrder = 301;
       this.scene.add(g);
       this.fx.push({ o: g, t: 0, life, kind: "sparkle", x0: x, y0: y, sw: (Math.random() - 0.5) * 0.6 });
     }
@@ -257,9 +282,39 @@ const Stage = (() => {
       const len = Math.hypot(x1 - x0, y1 - y0);
       const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthTest: false });
       const g = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.05), m);
-      g.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0); g.rotation.z = Math.atan2(y1 - y0, x1 - x0); g.renderOrder = 49;
+      g.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0); g.rotation.z = Math.atan2(y1 - y0, x1 - x0); g.renderOrder = 299;
       this.scene.add(g);
       this.fx.push({ o: g, t: 0, life, kind: "beam" });
+    }
+
+    // 날아가는 탄: 짧은 빛줄기가 출발점에서 목표까지 날아간다 (화면을 가로지르는 긴 선 대신)
+    bolt(x0, y0, x1, y1, color = 0x9fd6ff, life = 0.14, len = 0.55, wdt = 0.05) {
+      if (!this.scene) return;
+      const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthTest: false });
+      const g = new THREE.Mesh(spriteGeo(), m);
+      const L = Math.hypot(x1 - x0, y1 - y0) || 1;
+      g.scale.set(Math.min(len, L), wdt, 1); g.rotation.z = Math.atan2(y1 - y0, x1 - x0); g.renderOrder = 299; g.position.set(x0, y0, 0);
+      this.scene.add(g);
+      this.fx.push({ o: g, t: 0, life, kind: "bolt", x0, y0, x1, y1, shared: true });
+    }
+    // 발밑 고리: 장수 위치 표시 (진영색). 돌려받은 객체의 set(x, y, w, opacity)로 매 프레임 옮긴다
+    ring(color) {
+      if (!this.scene) return null;
+      const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, depthTest: false, depthWrite: false });
+      const o = new THREE.Mesh(new THREE.RingGeometry(0.78, 1, 40), m); o.renderOrder = 6; this.scene.add(o);
+      const fill = new THREE.Mesh(shadowGeo(), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.16, depthTest: false, depthWrite: false })); fill.renderOrder = 5; this.scene.add(fill);
+      const r = { set: (x, y, w, op) => { o.position.set(x, y + 0.04, 0); o.scale.set(w, w * 0.3, 1); m.opacity = op; fill.position.set(x, y + 0.04, 0); fill.scale.set(w, w * 0.3, 1); fill.material.opacity = op * 0.25; o.visible = fill.visible = op > 0.01; },
+        color: (c) => { m.color.setHex(c); fill.material.color.setHex(c); } };
+      return r;
+    }
+    // 바닥 먼지: 넓게 퍼지며 옅어지는 흙먼지 (발밑 충돌·폭발 자국)
+    dust(x, y, size = 0.6, life = 0.45, color = 0xb8a27a) {
+      if (!this.scene) return;
+      const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, depthTest: false });
+      const g = new THREE.Mesh(shadowGeo(), m);
+      g.position.set(x, y + 0.05, 0); g.renderOrder = 6; g.scale.set(0.1, 0.04, 1);
+      this.scene.add(g);
+      this.fx.push({ o: g, t: 0, life, size, kind: "dust", shared: true });
     }
 
     tick(dt) {
@@ -293,27 +348,37 @@ const Stage = (() => {
           const tex = texOf(cur); if (sp.mat.map !== tex) { sp.mat.map = tex; sp.mat.needsUpdate = true; }
           let fall = 0;
           if (sp.dying != null) {
-            sp.dying -= dt; sp.opacity = Math.max(0, Math.min(1, sp.dying / 0.45));
+            sp.dying -= dt; sp.opacity = sp.corpse ? Math.max(0, Math.min(0.3, sp.dying / 2)) : Math.max(0, Math.min(1, sp.dying / 0.45)); // 시체는 옅게 남았다가 마지막 2초에 사라진다
             // 쓰러짐: 맞은 반대쪽으로 넘어지며 사라진다 (탈주·철수 병사는 그냥 흐려진다)
             if (!sp.noFall) { sp.fallT = (sp.fallT || 0) + dt; fall = Math.min(1, sp.fallT / 0.22); } else sp.sink += dt * 0.5;
             if (sp.dying <= 0) { this.removeSprite(sp); return false; }
           }
           sp.mesh.rotation.z = fall ? -sp.face * fall * 1.35 : 0;
-          let ox = 0;
-          if (sp.kb) { sp.kb.t += dt; const k = Math.min(1, sp.kb.t / 0.25); ox = sp.kb.dir * 0.25 * Math.sin(k * Math.PI); if (k >= 1) sp.kb = null; }
-          sp.mat.opacity = sp.opacity; { const k = sp.tint || 1, c = sp.team; if (c) sp.mat.color.setRGB(c[0] * k, c[1] * k, c[2] * k); else sp.mat.color.setScalar(k); }
+          let ox = 0, oy = 0;
+          // 튕겨 날아감: 큰 타격에 쓰러진 병사는 포물선을 그리며 뒤로 날아가 떨어진다
+          if (sp.launch) { const t = sp.launch.t += dt; oy = Math.max(0, 4 * t - 10 * t * t); ox = sp.launch.dir * Math.min(t, 0.4) * 2.2; sp.mesh.rotation.z = -sp.launch.dir * Math.min(1.6, t * 6); }
+          if (sp.kb) { sp.kb.t += dt; const k = Math.min(1, sp.kb.t / 0.25); ox += sp.kb.dir * 0.3 * Math.sin(k * Math.PI); if (k >= 1) sp.kb = null; }
+          // 피격 번쩍임: 맞은 순간 잠깐 밝아진다
+          if (sp.hitT > 0) sp.hitT -= dt;
+          sp.mat.opacity = sp.opacity; { const k = (sp.tint || 1) * (sp.hitT > 0 ? 2.2 : 1), c = sp.corpse && sp.dying != null ? [0.55, 0.55, 0.55] : sp.team; /* 시체는 진영색 없이 회색 */ if (c) sp.mat.color.setRGB(c[0] * k, c[1] * k, c[2] * k); else sp.mat.color.setScalar(k); }
           const w = sp.h * sp.frames.aspect;
           sp.mesh.scale.set(w * sp.face, sp.h, 1);
-          sp.mesh.position.set(sp.x + ox, sp.y + sp.h / 2 - sp.sink - fall * sp.h * 0.32, 0);
-          sp.mesh.renderOrder = 10 + Math.round(-sp.y * 10);
+          sp.mesh.position.set(sp.x + ox, sp.y + sp.h / 2 - sp.sink - (sp.launch ? 0 : fall * sp.h * 0.32) + oy, 0);
+          sp.mesh.renderOrder = sp.corpse ? 7 : 20 + Math.round(-sp.y * 10); // (시체는 살아 있는 병사 아래) // 유닛 20~80 · 바닥(그림자·발판·고리·먼지) 5~6 · 효과 299~301
+          if (sp.shadow) { if (sp.team && !sp.teamSet) { sp.teamSet = true; sp.shadow.material = teamMat(sp.teamDisc || sp.team); } sp.shadow.visible = sp.dying == null;sp.shadow.position.set(sp.x + ox, sp.y + 0.03, 0); sp.shadow.scale.set(sp.h * 0.26, sp.h * 0.07, 1); }
           return true;
         });
       }
       this.fx = this.fx.filter((f) => {
         f.t += dt; const k = f.t / f.life;
-        if (k >= 1) { this.scene.remove(f.o); f.o.geometry.dispose(); f.o.material.dispose(); return false; }
+        if (k >= 1) { this.scene.remove(f.o); if (!f.shared) f.o.geometry.dispose(); f.o.material.dispose(); return false; }
         if (f.kind === "burst") { const s = f.size * (0.3 + k * 0.9); f.o.scale.set(s, s, 1); }
         if (f.kind === "sparkle") f.o.position.set(f.x0 + Math.sin(k * 6) * f.sw, f.y0 + k * 2.2, 0);
+        if (f.kind === "glow") { const s = f.size * (0.55 + Math.sqrt(k) * 0.9) * 1.6; f.o.scale.set(s, s, 1); f.o.material.opacity = f.peak * (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85); return true; }
+        if (f.kind === "shock") { const s = f.size * (0.3 + k * 1.1); f.o.scale.set(s, s * 0.45, 1); f.o.material.opacity = 0.5 * (1 - k); return true; }
+        if (f.kind === "spark") { const tt = f.t; f.o.position.set(f.x0 + f.vx * tt * 0.5, f.y0 + f.vy * tt * 0.5 - 4.5 * tt * tt, 0); const s = f.r * (1 - k * 0.6) * 2; f.o.scale.set(s, s, 1); f.o.material.opacity = 0.9 * (1 - k); return true; }
+        if (f.kind === "bolt") { f.o.position.set(f.x0 + (f.x1 - f.x0) * k, f.y0 + (f.y1 - f.y0) * k, 0); f.o.material.opacity = 0.95; return true; }
+        if (f.kind === "dust") { const s = f.size * (0.4 + k * 0.8); f.o.scale.set(s, s * 0.32, 1); f.o.material.opacity = 0.4 * (1 - k); return true; }
         f.o.material.opacity = (f.kind === "burst" ? 0.6 : 0.85) * (1 - k);
         return true;
       });

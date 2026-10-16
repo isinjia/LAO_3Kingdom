@@ -3,11 +3,15 @@
 
 Object.assign(UI, {
   // ── 공용 연출 ──────────────────────
+  // 연출 배속: 진형(턴제) 전투의 속도 설정을 따른다. 야전에서는 야전 배속과 무관하게 제 시간대로 보여 준다
+  fxSpeed() { return document.querySelector("#field.on") ? 1 : Battle.speed || 1; },
   banner(title, sub, ms = 1300, cls = "") {
+    // 배너는 겹쳐 쌓지 않는다: 새 배너가 뜨면 이전 배너는 바로 사라진다
+    document.querySelectorAll(".banner:not(.out)").forEach((o) => { o.classList.add("out"); setTimeout(() => o.remove(), 500); });
     const b = h("div", { class: "banner " + cls }, h("div", { class: "bnIn" }, h("b", null, title), sub ? h("small", null, sub) : null));
     document.body.append(b);
-    setTimeout(() => b.classList.add("out"), ms / (Battle.speed || 1));
-    setTimeout(() => b.remove(), ms / (Battle.speed || 1) + 500);
+    setTimeout(() => b.classList.add("out"), ms / this.fxSpeed());
+    setTimeout(() => b.remove(), ms / this.fxSpeed() + 500);
   },
 
   // 스킬 컷인: 초상화가 사선 띠와 함께 지나간다
@@ -19,7 +23,7 @@ Object.assign(UI, {
       h("div", { class: "ciText" + (text.length > 6 ? " long" : "") }, h("small", null, (b.u.full || b.name) + (sub ? ` · ${sub}` : "")), h("b", null, text)));
     document.body.append(el);
     Sound.sfx("charge", 0.7);
-    const d = 950 / (Battle.speed || 1);
+    const d = 950 / this.fxSpeed();
     return new Promise((res) => { setTimeout(() => el.classList.add("out"), d - 250); setTimeout(() => { el.remove(); res(); }, d); });
   },
 
