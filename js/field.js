@@ -550,7 +550,7 @@ const Field = {
     for (const o of this.groups) if (!o.b.out && o.side === g.side) o.mor = Math.max(0, o.mor - 5);
     if (g.actor && FUI.stage) FUI.stage.fadeOut(g.actor, 700);
     this.say(`${g.b.gname ? g.b.gname + " " : ""}${g.b.name} ${g.b.troops > 0 ? `부대 철수 — 병력 ${fmtN(g.b.troops)} 보존` : "단신으로 전장을 빠져나갔다"}`, g.side === this.mySide ? "" : "hot");
-    if (this.sel === g) this.sel = this.groups.find((o) => !o.b.out && this.ctrl(o.b)) || g;
+    if (this.sel === g) { this.sel = this.groups.find((o) => !o.b.out && this.ctrl(o.b)) || g; this.scope = "all"; if (!this.sim) FUI.cmdState(this); } // (명령 대상 표시 갱신 — 한 장수 대상이었으면 전군으로)
   },
   rout(g) {
     if (g.b.out) return;
@@ -567,7 +567,7 @@ const Field = {
     // 총대장이 쓰러지는 순간: 잠깐 느려지며 카메라가 그쪽을 비춘다
     if (!this.sim && !g.b.generic && this.isLead(g)) { this.slow = 1.1; if (FUI.stage) { const wasFollow = FUI.follow; FUI.setFollow(false); FUI.camX = g.x; FUI.stage.burst(g.x, g.y + 0.9, 0xffe28a, 2.4, 0.6); FUI.shake(true); if (wasFollow) setTimeout(() => FUI.stage && FUI.setFollow(true), 1600); } } // 슬로모션이 끝나면 다시 추적 카메라로
     if (!this.sim && !g.b.generic && this.isLead(g)) UI.banner(`${g.b.name} 패주`, g.side === this.mySide ? "아군 장수가 쓰러졌다" : "적장을 쓰러뜨렸다", 900, g.side === this.mySide ? "lose" : "win");
-    if (this.sel === g) this.sel = this.groups.find((o) => !o.b.out && this.ctrl(o.b)) || g;
+    if (this.sel === g) { this.sel = this.groups.find((o) => !o.b.out && this.ctrl(o.b)) || g; this.scope = "all"; if (!this.sim) FUI.cmdState(this); } // (명령 대상 표시 갱신 — 한 장수 대상이었으면 전군으로)
   },
 
   // ── 무장기 ──
@@ -691,7 +691,7 @@ const Field = {
   // 하위 호환: 쓸 수 있는 가장 큰 무장기
   skill(g) { for (let i = g.skills.length - 1; i >= 0; i--) if (this.canCast(g, i) && this.cast(g, i, true)) return true; return false; },
   aiSkill(g, smallOnly) {
-    const order = g.skills.map((s, i) => i).filter((i) => this.canCast(g, i) && !(smallOnly && g.skills[i].id === "storm")).sort((a, b) => g.skills[b].cost - g.skills[a].cost);
+    const order = g.skills.map((s, i) => i).filter((i) => this.canCast(g, i) && !(smallOnly && (g.skills[i].id === "storm" || (this.isLead(g) && g.skills[i].kind === "dash")))).sort((a, b) => g.skills[b].cost - g.skills[a].cost);
     if (!order.length) return;
     const saving = g.skills.some((s) => s.big && s.cost > g.mp && g.mp + 25 >= s.cost);
     for (const i of order) {
@@ -810,7 +810,7 @@ const Field = {
     const tg = f.g, mul = this.mulVs(g, tg) * Math.sqrt(clsEdge(g.b.cls, tg.b.cls)) * (0.85 + Math.random() * 0.3);
     if (f.s) {
       if (!f.s.alive || !dS) return;
-      f.s.hp -= dS * FLD.SK_SOLDIER * (o.ctx && o.ctx.big ? 1.8 : 1) * mul * (tg.guard > 0 ? 0.6 : 1) * tg.form.def * this.wallMul(f.s, tg.side) * (o.ctx && o.ctx.k >= o.ctx.cap ? 0.3 : 1); // 처치 상한을 넘기면 30%만 (헛맞지 않고 피격 연출은 그대로)
+      f.s.hp -= dS * Math.pow(tg.ps || 1, 0.7) * FLD.SK_SOLDIER * (o.ctx && o.ctx.big ? 1.8 : 1) * mul * (tg.guard > 0 ? 0.6 : 1) * tg.form.def * this.wallMul(f.s, tg.side) * (o.ctx && o.ctx.k >= o.ctx.cap ? 0.3 : 1); // 처치 상한을 넘기면 30%만 (헛맞지 않고 피격 연출은 그대로)
       if (f.s.spr && FUI.stage) { f.s.spr.kb = { t: 0, dir: Math.sign(f.s.x - g.x) || 1 }; f.s.spr.hitT = 0.12; } // (처치 상한을 넘긴 타격은 피해가 없으니 피격 연출도 없다)
       if (f.s.hp <= 0) { this.killSoldier(f.s, g); g.skK++; if (o.ctx) o.ctx.k++; if (f.s.spr) f.s.spr.launch = { t: 0, dir: Math.sign(f.s.x - g.x) || 1 }; } // 무장기에 쓰러진 병사는 튕겨 날아간다
     } else {
@@ -852,7 +852,8 @@ const Field = {
   // ── 일기토: 장수끼리 맞닥뜨리면 한쪽이 신청한다. 「장수 돌격」 중인 장수는 더 넓은 거리에서 더 자주 신청한다 ──
   duelCheck(dt) {
     if (this.duelCd > 0) { this.duelCd -= dt; return; }
-    if (!this.sim && FUI.ask) return; // 답을 기다리는 일기토 알림이 있으면 새로 걸지 않는다 (기다리는 알림을 덮어쓰지 않게)
+    if (!this.sim && FUI.ask) return;
+    if (this.routing || (this.collapsed && (this.collapsed.atk || this.collapsed.def))) return; // 총붕괴·패주 중에는 일기토를 걸지 않는다 // 답을 기다리는 일기토 알림이 있으면 새로 걸지 않는다 (기다리는 알림을 덮어쓰지 않게)
     const gens = this.groups.filter((g) => !g.b.out && !g.b.generic && g.hp > 0 && !g.dash);
     for (const a of gens) for (const b of gens) {
       if (a.side === b.side) continue;
@@ -1514,7 +1515,7 @@ const FUI = {
       el.classList.toggle("sel", F_.sel === g);
       el.classList.toggle("asking", !!this.ask && this.ask.g === g);
     }
-    for (const q of placed) if (q.extra) q.el.children[0].textContent = `${q.name} 외 ${q.extra}`;
+    for (const q of placed) if (q.extra) q.el.children[0].textContent = `${q.el.children[0].textContent} 외 ${q.extra}`;
     // 부대 깃발: 병사 무리 한가운데 위에 부대색 작은 깃발 — 어느 무리가 어느 장수 부대인지 (장수가 멀리 있어도)
     for (const g of F_.groups) {
       if (g.b.generic && !g.sq) continue;
