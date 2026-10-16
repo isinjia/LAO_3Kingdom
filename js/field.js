@@ -7,7 +7,7 @@
 //   승패: 적 총대장 격파 · 적 전멸 · 적 총붕괴 후 퇴각 / 제한 시간이 지나면 남은 전력 비교(공격측은 1.4배 필요)
 "use strict";
 
-const FLD = { X0: -19, X1: 19, Y0: -5.4, Y1: 0.6, TIME: 240, SURGE: 60, SURGE_K: 1.15, START: 7.5, FORM_CD: 40, EDGE_UP: 1.15, EDGE_DN: 0.91, SOLDIER_HP: 4000, GEN_VS_SOLDIER: 2.3, ALONE_DECAY: 1.5, SK_SOLDIER: 3.2, WALL_W: 3.6, PER: 120, COLLAPSE_T: 10 };
+const FLD = { X0: -19, X1: 19, Y0: -5.4, Y1: 0.6, TIME: 150, SURGE: 60, SURGE_K: 1.15, START: 7.5, FORM_CD: 40, EDGE_UP: 1.15, EDGE_DN: 0.91, SOLDIER_HP: 2800, GEN_VS_SOLDIER: 2.3, ALONE_DECAY: 1.5, SK_SOLDIER: 2.2, WALL_W: 3.6, PER: 120, COLLAPSE_T: 8 };
 const fmtN = (n) => Math.round(n).toLocaleString();
 // 진영색: 같은 병사 리그를 쓰는 양군을 구분한다 (공격 = 푸른빛, 수비 = 붉은빛)
 const FLD_TEAM = { atk: [0.9, 1.0, 1.25], def: [1.2, 0.92, 0.88] }; // (색은 옅게 — 진영은 발판 원반이 가른다, 병사 그림이 탁해지지 않게)
@@ -810,8 +810,8 @@ const Field = {
     const tg = f.g, mul = this.mulVs(g, tg) * Math.sqrt(clsEdge(g.b.cls, tg.b.cls)) * (0.85 + Math.random() * 0.3);
     if (f.s) {
       if (!f.s.alive || !dS) return;
-      f.s.hp -= dS * FLD.SK_SOLDIER * (o.ctx && o.ctx.big ? 1.8 : 1) * mul * (tg.guard > 0 ? 0.6 : 1) * tg.form.def * this.wallMul(f.s, tg.side) * (o.ctx && o.ctx.k >= o.ctx.cap ? 0 : 1);
-      if (f.s.spr && FUI.stage && !(o.ctx && o.ctx.k >= o.ctx.cap)) { f.s.spr.kb = { t: 0, dir: Math.sign(f.s.x - g.x) || 1 }; f.s.spr.hitT = 0.12; } // (처치 상한을 넘긴 타격은 피해가 없으니 피격 연출도 없다)
+      f.s.hp -= dS * FLD.SK_SOLDIER * (o.ctx && o.ctx.big ? 1.8 : 1) * mul * (tg.guard > 0 ? 0.6 : 1) * tg.form.def * this.wallMul(f.s, tg.side) * (o.ctx && o.ctx.k >= o.ctx.cap ? 0.3 : 1); // 처치 상한을 넘기면 30%만 (헛맞지 않고 피격 연출은 그대로)
+      if (f.s.spr && FUI.stage) { f.s.spr.kb = { t: 0, dir: Math.sign(f.s.x - g.x) || 1 }; f.s.spr.hitT = 0.12; } // (처치 상한을 넘긴 타격은 피해가 없으니 피격 연출도 없다)
       if (f.s.hp <= 0) { this.killSoldier(f.s, g); g.skK++; if (o.ctx) o.ctx.k++; if (f.s.spr) f.s.spr.launch = { t: 0, dir: Math.sign(f.s.x - g.x) || 1 }; } // 무장기에 쓰러진 병사는 튕겨 날아간다
     } else {
       if (tg.hp <= 0 || tg.b.out || !dG) return;
@@ -1120,7 +1120,7 @@ const Field = {
       const why = s === "atk" ? "공격군 총붕괴 — 퇴각했다" : "수비군 총붕괴 — 거점을 버리고 퇴각했다";
       if (this.sim) { for (const g of al) { for (const x of g.soldiers) if (x.alive) { x.alive = false; x.wd = true; } g.b.out = true; g.b.withdrawn = true; } return this.finish(s === "def", why); }
       const foeG = this.alive(s === "atk" ? "def" : "atk")[0];
-      for (const g of al) { for (const x of g.soldiers) if (x.alive) { if (Math.random() < 0.15) this.killSoldier(x, foeG); else { x.alive = false; x.wd = true; x.flee = 3; if (x.spr) { x.spr.noFall = true; x.spr.idle = false; if (FUI.stage) FUI.stage.spriteAnim(x.spr, "move"); } } } this.setCmd(g, "retreat"); g.b.out = true; g.b.withdrawn = true; if (g.actor && FUI.stage) FUI.stage.fadeOut(g.actor, 2500); }
+      for (const g of al) { for (const x of g.soldiers) if (x.alive) { if (Math.random() < 0.15) this.killSoldier(x, foeG); else { x.alive = false; x.wd = true; x.flee = 3; if (x.spr) { x.spr.noFall = true; x.spr.idle = false; if (FUI.stage) FUI.stage.spriteAnim(x.spr, "move"); } } } this.setCmd(g, "retreat"); g.b.out = true; g.b.withdrawn = !this.isLead(g); if (g.actor && FUI.stage) FUI.stage.fadeOut(g.actor, 2500); } // (무너진 군의 총대장은 철수가 아니라 패주 — 격파·포로 대상)
       this.routing = { s, t0: this.t, why };
       const cx = al.reduce((a, g) => a + g.x, 0) / Math.max(1, al.length);
       if (FUI.stage) { FUI.setFollow(false); FUI.camX = cx; }
