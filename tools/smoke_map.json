@@ -1,0 +1,18 @@
+[
+  {
+    "goto": "/index.html",
+    "wait": 2500
+  },
+  {
+    "eval": "localStorage.setItem('lao3k_tut','1'); newGame('3P_Labiata',{}); UI.sel=P().city; UI.show('main'); UI.render(); return Object.keys(G.cities).length;"
+  },
+  {
+    "wait": 2000
+  },
+  {
+    "shot": "world-map"
+  },
+  {
+    "eval": "const image=new Image(); image.src=document.querySelector('.mapArtwork').getAttribute('href'); await image.decode(); const first=document.querySelector('#map .city'); first.dispatchEvent(new MouseEvent('click',{bubbles:true})); return {image:[image.naturalWidth,image.naturalHeight],cities:document.querySelectorAll('#map .city').length,roads:document.querySelectorAll('#map .road').length,selected:!!document.querySelector('#map .city.sel'),blurredTerrain:!!document.querySelector('#map .terrain'),seasonFilter:getComputedStyle(document.querySelector('#map')).filter};"
+  }
+]

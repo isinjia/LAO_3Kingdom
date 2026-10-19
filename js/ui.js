@@ -392,25 +392,17 @@ const UI = {
     const svg = $("#map"); svg.innerHTML = "";
     const p = P();
     svg.append(sv("defs", {}, ...[
-      `<filter id="blur30" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="30"/></filter>`,
       `<filter id="blur8"><feGaussianBlur stdDeviation="8"/></filter>`,
       `<filter id="ds" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity=".8"/></filter>`,
       `<radialGradient id="glow"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".75"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>`,
       `<clipPath id="cc"><circle r="1"/></clipPath>`,
       `<marker id="arr" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker>`,
     ].map((x) => { const t = document.createElement("template"); t.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg">${x}</svg>`; return t.content.firstChild.firstChild; })));
-    // 지형
-    const terr = sv("g", { class: "terrain", filter: "url(#blur30)" });
-    terr.append(sv("ellipse", { cx: 170, cy: 210, rx: 190, ry: 150, fill: "#6b5734" }), sv("ellipse", { cx: 820, cy: 90, rx: 220, ry: 90, fill: "#5c6a78" }),
-      sv("ellipse", { cx: 560, cy: 560, rx: 260, ry: 130, fill: "#2f4a2c" }), sv("ellipse", { cx: 330, cy: 470, rx: 120, ry: 110, fill: "#4a4f3a" }),
-      sv("ellipse", { cx: 700, cy: 300, rx: 200, ry: 120, fill: "#3d3a33" }));
-    svg.append(terr);
-    svg.append(sv("path", { d: "M1000 40 C 975 160, 1012 260, 985 360 S 1002 560, 992 740 L1060 740 L1060 0 Z", class: "sea" }));
-    svg.append(sv("path", { d: "M60 300 C 200 330, 330 250, 470 280 S 640 330, 760 300 S 880 330, 990 330", class: "river" }));
-    svg.append(sv("path", { d: "M180 600 C 300 640, 420 560, 520 600 S 700 610, 800 590 S 920 560, 990 570", class: "river" }));
-    // 영역
-    const halo = sv("g", { class: "halo", filter: "url(#blur30)" });
-    for (const c of Object.values(G.cities)) { const f = F(c.owner); if (f) halo.append(sv("circle", { cx: c.x, cy: c.y, r: 58 + c.size * 12, fill: f.color, opacity: 0.32 })); }
+    // 원화와 도시가 동일한 좌표계를 사용하므로 화면 비율이 달라도 위치가 어긋나지 않는다.
+    svg.append(sv("image", { href: "assets/bg/world-map.webp", x: 0, y: 0, width: 1060, height: 740, preserveAspectRatio: "none", class: "mapArtwork" }));
+    // 영역 색은 도시 주변의 얇은 테두리로 표시해 지형 원화를 가리지 않는다.
+    const halo = sv("g", { class: "halo" });
+    for (const c of Object.values(G.cities)) { const f = F(c.owner); if (f) halo.append(sv("circle", { cx: c.x, cy: c.y, r: 30 + c.size * 4, fill: f.color, "fill-opacity": 0.09, stroke: f.color, "stroke-opacity": 0.45, "stroke-width": 1.5 })); }
     svg.append(halo);
     const hot = this.sel;
     for (const [a, b] of ROADS) {

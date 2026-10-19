@@ -157,13 +157,13 @@ h4 { margin: 12px 0 6px; font-size: 12.5px; color: var(--muted); font-weight: 50
 .hbtns #btnEnd { padding: 6px 18px; font-size: 14px; }
 .mainBody { flex: 1; display: grid; grid-template-columns: 1fr 420px; min-height: 0; }
 #mapWrap { position: relative; overflow: hidden; background: radial-gradient(ellipse at 45% 45%, #2b2a24 0%, #1a1b17 55%, #0e0f0d 100%); }
-#mapWrap::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(#ffffff07 1px, transparent 1px), linear-gradient(90deg, #ffffff07 1px, transparent 1px); background-size: 44px 44px; pointer-events: none; z-index: 1; }
-#mapWrap::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 120px #000c; pointer-events: none; z-index: 2; }
+#mapWrap::before { content: ""; position: absolute; inset: 0; background: none; pointer-events: none; z-index: 1; }
+#mapWrap::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 32px #0004; pointer-events: none; z-index: 2; }
 #map { width: 100%; height: 100%; position: relative; z-index: 0; }
 .terrain { opacity: .55; }
 .sea { fill: #10202c; } .river { fill: none; stroke: #27425a; stroke-width: 7; stroke-linecap: round; opacity: .85; }
 .halo { pointer-events: none; }
-.road { stroke: #6a604a; stroke-width: 2.2; stroke-dasharray: 6 5; opacity: .75; }
+.road { stroke: #594128; stroke-width: 2.5; stroke-dasharray: 6 5; opacity: .9; filter: drop-shadow(0 1px 1px #fff9); }
 .road.hot { stroke: #c9b07a; opacity: 1; } .road.here { stroke: var(--gold2); stroke-width: 3; opacity: 1; animation: dash 1.2s linear infinite; }
 @keyframes dash { to { stroke-dashoffset: -22; } }
 .warArrow { fill: none; stroke-width: 4; stroke-dasharray: 10 6; opacity: .9; animation: dash 0.8s linear infinite, fadeA 7s forwards; filter: drop-shadow(0 0 4px #000); }
@@ -670,11 +670,11 @@ details.mateHint summary::before { content: "▸ "; } details.mateHint[open] sum
 .recNo { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: #222; font-size: 22px; color: var(--muted); }
 
 /* 지도 계절 색조: 겨울 푸른빛 · 봄 연분홍 · 여름 녹음 · 가을 단풍 (전환은 천천히) */
-#mapWrap #map { transition: filter 1.2s; }
-#mapWrap[data-season="winter"] #map { filter: saturate(.68) hue-rotate(-14deg) brightness(1.05); }
-#mapWrap[data-season="spring"] #map { filter: saturate(1.12) hue-rotate(10deg) brightness(1.03); }
-#mapWrap[data-season="summer"] #map { filter: saturate(1.28) brightness(1.02); }
-#mapWrap[data-season="autumn"] #map { filter: saturate(1.12) sepia(.24) hue-rotate(-16deg); }
+#mapWrap .mapArtwork { transition: filter 1.2s; pointer-events: none; }
+#mapWrap[data-season="winter"] .mapArtwork { filter: saturate(.68) hue-rotate(-14deg) brightness(1.05); }
+#mapWrap[data-season="spring"] .mapArtwork { filter: saturate(1.12) hue-rotate(10deg) brightness(1.03); }
+#mapWrap[data-season="summer"] .mapArtwork { filter: saturate(1.28) brightness(1.02); }
+#mapWrap[data-season="autumn"] .mapArtwork { filter: saturate(1.12) sepia(.24) hue-rotate(-16deg); }
 #mapWrap { transition: background 1.2s; }
 #mapWrap[data-season="winter"] { background: radial-gradient(ellipse at 45% 45%, #262c33 0%, #171b20 55%, #0c0e11 100%); }
 #mapWrap[data-season="summer"] { background: radial-gradient(ellipse at 45% 45%, #26301f 0%, #181d14 55%, #0d0f0b 100%); }
