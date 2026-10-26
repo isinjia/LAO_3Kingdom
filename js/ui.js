@@ -522,7 +522,7 @@ const UI = {
     const f = F(p.fac);
     side.append(h("section", { class: "card me", style: `--fc:${f ? f.color : "#77736a"}` },
       h("div", { class: "meHead" },
-        h("div", { class: "meFace" }, face(p, 96, "lg"), h("img", { class: "meSd", src: `assets/sdface/${p.id}.webp`, alt: "" })),
+        h("div", { class: "meFace" }, face(p, 96, "lg")),
         h("div", { class: "meInfo" },
           h("div", { class: "nameRow" }, gradeBadge(p), h("h2", null, p.name), h("span", { class: "status" }, statusOf(p))),
           h("div", { class: "muted small" }, p.full !== p.name ? p.full : "", " ", typeTag(p)),

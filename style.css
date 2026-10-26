@@ -191,9 +191,8 @@ h4 { margin: 12px 0 6px; font-size: 12.5px; color: var(--muted); font-weight: 50
 #side { overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(#10141a, #0c0f13); border-left: 1px solid var(--line); }
 #side::-webkit-scrollbar, .selGrid::-webkit-scrollbar, .tblWrap::-webkit-scrollbar { width: 8px; } #side::-webkit-scrollbar-thumb, .selGrid::-webkit-scrollbar-thumb, .tblWrap::-webkit-scrollbar-thumb { background: #2b3542; border-radius: 4px; }
 .card.me { border-color: color-mix(in srgb, var(--fc) 45%, var(--line)); background: linear-gradient(160deg, color-mix(in srgb, var(--fc) 14%, #171d25), #12171e 60%); }
-.meHead { display: flex; gap: 12px; }
-.meFace { position: relative; padding: 0 10px 8px 0; margin: 0 -10px -8px 0; } /* SD 배지가 칸 안에 들어오도록 여백 (레이아웃 위치는 그대로) */
-.meSd { position: absolute; right: 0; bottom: 0; width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--gold2); background: #0b0d10; }
+.meHead { display: flex; gap: 12px; align-items: center; } /* 프로필 사진은 오른쪽 정보 칸의 세로 가운데 */
+.meFace { flex-shrink: 0; }
 .meInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .meInfo h2 { font-size: 21px; }
 .status { font: 700 11px var(--sans); color: #111; background: var(--gold); padding: 1px 9px; border-radius: 10px; }
