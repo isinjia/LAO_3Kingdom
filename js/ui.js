@@ -319,7 +319,10 @@ const UI = {
       const yb = st && st.camera ? st.camera.bottom + 0.1 : -3.9; // 무대 바닥 (세로 화면에서는 무대가 높아진다)
       if (st && window.SD) await Promise.race([Promise.all(speakers.map((u) => Stage.rigOf(u.id)).filter(Boolean).map((id) => SD.prepare(id))), new Promise((r) => setTimeout(r, 2500))]);
       const actors = {};
-      if (st && e.cast) { const W = st.camera.right - st.camera.left; e.cast.forEach((id, k) => { if (!U(id) || !Stage.rigOf(id)) return; const side = k % 2 ? 1 : -1; const a = actors[id] = st.add(id, side * W * 0.27, yb, 5.4, -side, { z: 10 }); setTimeout(() => a.sd && a.sd.setTint(0.38, 0.38, 0.44), 50); }); }
+      // 말하는 사람마다 자리를 하나씩: 처음 나온 사람 왼쪽, 다음 사람 오른쪽 (줄 순서와 상관없이 겹치지 않게)
+      const sideOf = {}; const SLOTS = [-1, 1, -1.55, 1.55, 0];
+      const slotFor = (id) => { if (!(id in sideOf)) { const used = Object.values(sideOf); sideOf[id] = SLOTS.find((x) => !used.includes(x)) ?? (Object.keys(sideOf).length % 2 ? 1 : -1); } return sideOf[id]; };
+      if (st && e.cast) { const W = st.camera.right - st.camera.left; e.cast.forEach((id, k) => { if (!U(id) || !Stage.rigOf(id)) return; const side = slotFor(id); const a = actors[id] = st.add(id, side * W * 0.27, yb, 5.4, side > 0 ? -1 : 1, { z: 10 }); setTimeout(() => a.sd && a.sd.setTint(0.38, 0.38, 0.44), 50); }); }
       let i = 0, typing = null;
       const lines = e.lines;
       // 선택지(L.choices)가 남은 채 건너뛰면 마지막 선택지(무난한 쪽)로 정한다
@@ -330,7 +333,7 @@ const UI = {
         const L = lines[i];
         const u = L.who ? U(L.who) : null;
         const f = u ? F(u.fac) : null;
-        const side = i % 2 ? 1 : -1;
+        const side = u ? slotFor(u.id) : -1;
         content.innerHTML = "";
         const useSd = st && u && Stage.rigOf(u.id) && SD.ready(Stage.rigOf(u.id));
         if (st) {
@@ -340,7 +343,7 @@ const UI = {
             let a = actors[u.id];
             if (!a) {
               const W = st.camera.right - st.camera.left;
-              a = actors[u.id] = st.add(u.id, side * W * 0.27, yb, 5.4, -side, { z: 10 });
+              a = actors[u.id] = st.add(u.id, side * W * 0.27, yb, 5.4, side > 0 ? -1 : 1, { z: 10 });
               st.play(a, "win");
             }
             if (a.sd) a.sd.setTint(1, 1, 1);
