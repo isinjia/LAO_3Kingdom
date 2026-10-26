@@ -1,5 +1,6 @@
 // 헤드리스 Chrome(DevTools 프로토콜)으로 게임을 조작하고 스크린샷을 찍는 테스트 도구. 항상 ?mute=1 (음소거)
 // 사용: node tools/shot.mjs <스크립트.json> [출력폴더]   (환경변수 BLOCK=js/a.js,js/b.js 로 특정 파일 차단)
+//   휴대폰 세로 화면: MOBILE=1 W=412 H=915
 //   스크립트: [{"goto":"/index.html"}, {"wait":800}, {"eval":"UI.prologue()"}, {"shot":"01_title"}, ...]
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -49,7 +50,10 @@ await connect();
 await send("Runtime.enable"); await send("Page.enable");
 // BLOCK=js/equip.js,js/stage.js 처럼 주면 해당 요청을 차단한다 (부팅 실패 경로 테스트)
 if (process.env.BLOCK) { await send("Network.enable"); await send("Network.setBlockedURLs", { urls: process.env.BLOCK.split(",").map((x) => "*" + x + "*") }); }
-await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: 1, mobile: false });
+// MOBILE=1: 휴대폰처럼 터치·모바일 뷰포트로 띄운다 (세로 화면 검사)
+const MOBILE = !!process.env.MOBILE;
+await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: MOBILE ? 2 : 1, mobile: MOBILE });
+if (MOBILE) { await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 }); await send("Emulation.setUserAgentOverride", { userAgent: "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36" }); }
 setTimeout(() => { console.log("global timeout"); try { proc.kill(); } catch (e) {} process.exit(2); }, 240000);
 for (const s of steps) {
   if (s.goto) { const u = BASE + s.goto + (s.goto.includes("?") ? "&" : "?") + "mute=1"; await send("Page.navigate", { url: u }); await sleep(s.wait || 1500); }

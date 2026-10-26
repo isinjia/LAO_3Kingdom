@@ -31,7 +31,7 @@ const Stage = (() => {
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       renderer.domElement.addEventListener("webglcontextlost", (e) => e.preventDefault()); // 복구를 허용 (three가 restored 시 재설정)
-      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      renderer.setPixelRatio(1); /* 무대 캔버스 크기에 이미 화면 배율을 곱해 두었으므로 렌더러는 1배 (휴대폰에서 2~3배 확대되던 문제) */
       renderer.setClearColor(0x000000, 0);
       SD.gpuSkin = renderer.capabilities.floatVertexTextures;
       SD.renderer = renderer;

@@ -164,11 +164,13 @@ Object.assign(UI, {
     const stage = h("div", { class: "dStage" }, h("div", { class: "bFloat" }));
     el.append(h("div", { class: "dhead" }, h("h2", null, "一騎討 · 일기토"), h("small", null, "강공은 방어에 간파당한다 · 방어는 기력을 모은다 · 기력 100이면 필살")),
       h("div", { class: "dTop" }), stage, h("div", { class: "dCtrl" }), h("div", { class: "blog dlog" }));
-    this.duelStage = Stage.ok ? Stage.create(stage, { height: 7 }) : null;
+    // 세로 화면에서는 무대를 높여 가로 시야를 확보하고, 두 장수를 화면 안쪽에 세운다
+    this.duelStage = Stage.ok ? Stage.create(stage, { height: typeof stageUnits === "function" ? stageUnits(stage, 7, 6.4) : 7 }) : null;
     if (this.duelStage) {
-      D.aMe = this.duelStage.add(D.me.code, -2.6, -2.2, 3.4, 1, { z: 5 });
-      D.aFoe = this.duelStage.add(D.foe.code, 2.6, -2.2, 3.4, -1, { z: 4 });
-      D.homeMe = -2.6; D.homeFoe = 2.6;
+      const cam = this.duelStage.camera; const hx = cam ? Math.min(2.6, (cam.right - cam.left) * 0.33) : 2.6; const y = cam ? cam.bottom + 1.3 : -2.2;
+      D.aMe = this.duelStage.add(D.me.code, -hx, y, 3.4, 1, { z: 5 });
+      D.aFoe = this.duelStage.add(D.foe.code, hx, y, 3.4, -1, { z: 4 });
+      D.homeMe = -hx; D.homeFoe = hx;
     }
     this.renderDuel(D);
   },

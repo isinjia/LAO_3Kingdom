@@ -26,6 +26,24 @@ const Sound = (() => {
   }
   ["pointerdown", "keydown"].forEach((ev) => window.addEventListener(ev, unlock, { once: false, capture: true }));
 
+  // 창이 포커스를 잃거나 탭·앱이 가려지면 모든 소리를 멈추고, 돌아오면 이어서 재생한다 (음소거 설정과는 별개)
+  let away = false;
+  function setAway(v) {
+    if (away === v) return;
+    away = v; note(v ? "포커스 잃음 — 소리 멈춤" : "포커스 복귀 — 소리 재개");
+    if (v) {
+      for (const el of [bgmEl, ambEl, voiceEl, ...Object.values(pool).flat()]) if (el && !el.paused) el.pause();
+      return;
+    }
+    if (pref.muted || !unlocked) return;
+    if (wantKey && wantKey !== bgmKey) bgm(wantKey, true);
+    else if (bgmEl && bgmEl.paused) bgmEl.play().catch(() => {});
+    if (ambEl && ambEl.paused) ambEl.play().catch(() => {});
+  }
+  window.addEventListener("blur", () => setAway(true));
+  window.addEventListener("focus", () => setAway(false));
+  document.addEventListener("visibilitychange", () => setAway(document.hidden));
+
   // 페이드는 타이머로 진행한다 (requestAnimationFrame은 탭이 숨겨지거나 렌더링이 밀리면 멈춰 BGM이 무음으로 남는다)
   function fade(el, to, ms, done) {
     if (el.__fade) clearInterval(el.__fade);
@@ -41,7 +59,7 @@ const Sound = (() => {
   function bgm(key, force) {
     if (GROUPS[key]) key = GROUPS[key].includes(bgmKey) && !force ? bgmKey : GROUPS[key][Math.floor(Math.random() * GROUPS[key].length)];
     wantKey = key;
-    if (!unlocked || pref.muted) return;
+    if (!unlocked || pref.muted || away) return;
     if (bgmKey === key && bgmEl && !bgmEl.paused && !force) return;
     const old = bgmEl;
     if (old) fade(old, 0, 600, () => old.pause());
@@ -55,7 +73,7 @@ const Sound = (() => {
   function amb(key) {
     if (ambKey === key && ambEl && !ambEl.paused) return;
     stopAmb();
-    ambKey = key; if (!key || pref.muted || !unlocked) return;
+    ambKey = key; if (!key || pref.muted || !unlocked || away) return;
     const el = new Audio(`assets/sfx/${key}.mp3`); el.loop = true; el.volume = 0;
     el.play().then(() => fade(el, pref.bgm, 1200)).catch(() => {});
     ambEl = el; note(`환경음 ▶ ${key}`);
@@ -66,7 +84,7 @@ const Sound = (() => {
 
   function play(src, vol) {
     note(`${pref.muted ? "(음소거) " : ""}${src.replace("assets/", "")}`);
-    if (pref.muted || !unlocked) return null;
+    if (pref.muted || !unlocked || away) return null;
     let list = pool[src] || (pool[src] = []);
     let el = list.find((a) => a.paused || a.ended);
     if (!el) { if (list.length >= 4) el = list[0]; else { el = new Audio(src); list.push(el); } }
@@ -128,6 +146,6 @@ const Sound = (() => {
     window.__sndPanel();
   });
   // 자동 오디오 검사용 상태 (tools/audio_check.json)
-  const state = () => ({ amb: ambKey, ambVol: ambEl ? +ambEl.volume.toFixed(3) : null, bgm: bgmKey, bgmVol: bgmEl ? +bgmEl.volume.toFixed(3) : null, bgmPlaying: !!(bgmEl && !bgmEl.paused), voicePlaying: !!(voiceEl && !voiceEl.paused), unlocked, muted: pref.muted });
+  const state = () => ({ away, amb: ambKey, ambVol: ambEl ? +ambEl.volume.toFixed(3) : null, bgm: bgmKey, bgmVol: bgmEl ? +bgmEl.volume.toFixed(3) : null, bgmPlaying: !!(bgmEl && !bgmEl.paused), voicePlaying: !!(voiceEl && !voiceEl.paused), unlocked, muted: pref.muted });
   return { bgm, stopBgm, amb, stopAmb, sfx, voice, hasVoice, charSfx, setMuted, setVol, pref, unlock, state, get current() { return bgmKey; } };
 })();

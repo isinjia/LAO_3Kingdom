@@ -876,3 +876,76 @@ body:has(#field.on) .cutin { top: calc(var(--fhead, 72px) + 2px); height: 150px;
 .fCmds .fCmd { min-width: 44px; padding: 3px 4px 2px; font-size: 11px; } .fCmds .fCmd .ico { width: 16px !important; height: 16px !important; }
 @media (max-width: 1440px) { .fSelStat { font-size: 9px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; } .fCmds .fCmd { min-width: 38px; } }
 .tripLine { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0 2px; padding: 5px 9px; border-radius: 9px; background: #e2b75a14; font-size: 12px; color: var(--gold2); }
+
+/* ── 휴대폰 세로 화면 ── */
+@media (max-width: 700px) {
+  /* 버튼·탭 글자가 한 글자씩 줄바꿈되지 않게 하고, 탭 줄은 옆으로 밀어 본다 */
+  button, .tab, .seg button { white-space: nowrap; }
+  .tabs { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs .tab { flex: 0 0 auto; }
+  .helpRow { grid-template-columns: 1fr; gap: 4px; }
+  /* 타이틀 */
+  .titleBox { margin-top: 0; padding: 20px 16px; }
+  .titleBox .sub { letter-spacing: .18em; font-size: 11px; }
+  .titleBox .tag { font-size: 15px; line-height: 1.6; padding: 0 6px; }
+  .titleBtns { flex-wrap: wrap; gap: 8px; }
+  .titleBtns button { flex: 1 1 calc(50% - 8px); padding: 13px 10px; font-size: 15px; }
+  .titleBtns button.primary { flex-basis: 100%; }
+  /* 상단 막대: 두 줄로 — 날짜·세력·행동력 / 명령 버튼 */
+  .hdr { flex-wrap: wrap; gap: 6px 10px; padding: 6px 10px; }
+  .hdr > * { flex-shrink: 1; }
+  #hdrDate b { font-size: 13px; } #hdrDate span { font-size: 20px; }
+  .hbtns { width: 100%; margin-left: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .hbtns::-webkit-scrollbar { display: none; }
+  .hbtns button { padding: 6px 9px; font-size: 13px; flex: 0 0 auto; }
+  .hbtns #btnEnd { margin-left: auto; padding: 7px 16px; }
+  /* 지도: 화면보다 넓게 그리고 옆으로 밀어 본다 */
+  .mainBody { grid-template-rows: 60vh auto; }
+  #mapWrap { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  #map { width: auto; height: 100%; aspect-ratio: 1060 / 740; max-width: none; }
+  #side { padding: 10px; }
+  /* 대화 장면 */
+  .vnStage { inset: 0 0 175px 0; }
+  .vnSquad { width: 84px; top: 8%; }
+  .vnBox { bottom: 14px; width: calc(100vw - 20px); min-height: 128px; padding: 18px 16px 22px; }
+  .vnName { left: 12px; padding: 3px 10px; } .vnName b { font-size: 15px; }
+  .vnText { font-size: 16px; line-height: 1.7; min-height: 56px; }
+  .vnSkip { top: 10px; right: 10px; padding: 6px 12px; font-size: 13px; }
+  .vnChar { width: min(78vw, 360px); bottom: 175px; } .vnChar.l, .vnChar.r { left: 50%; right: auto; transform: translateX(-50%); }
+  /* 도시 보기: 한 줄로 — 이름 / 거점 정보 / 거리 장면 / 인물 */
+  .cityView { grid-template-columns: 1fr; grid-template-rows: auto auto minmax(300px, 44vh) auto; overflow-y: auto; }
+  .cvTop { flex-wrap: wrap; gap: 8px; padding: 10px 12px 6px; }
+  .cvTop > div:nth-child(2) { flex: 1 1 0; min-width: 0; }
+  .cvTop h2 { font-size: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cvTop small { font-size: 12px; }
+  .cvTabs { margin-left: 0; }
+  .cvClose { margin-left: 0; }
+  .cvInfo { grid-column: 1; grid-row: 2; margin: 0 12px; padding: 10px 12px; }
+  .cvStage { grid-column: 1; grid-row: 3; }
+  .cvFac { grid-column: 1; grid-row: 3; grid-template-columns: repeat(2, 1fr); grid-auto-rows: minmax(130px, auto); margin: 6px 12px; }
+  .cityView.fac { grid-template-rows: auto auto auto auto; }
+  .cityView.fac .cvStage { display: none; }
+  .cvList { grid-column: 1; grid-row: 4; margin: 8px 12px 16px; max-height: none; }
+  .cvTag { width: 84px; margin-left: -42px; } .cvTag b { font-size: 11.5px; }
+}
+@media (max-width: 700px) {
+  /* 일기토 */
+  .dhead h2 { font-size: 22px; } .dhead small { font-size: 11px; text-align: center; }
+  .dTop { grid-template-columns: 1fr 34px 1fr; gap: 6px; }
+  .dcardInfo { padding: 8px; gap: 6px; } .dcardInfo .face { display: none; }
+  .dcardInfo b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .bvs { font-size: 22px; }
+  .bbtns .act span { font-size: 12px; }
+  /* 설전: 두 사람을 위에 나란히, 맞붙는 카드는 그 아래 */
+  .dbField { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 10px; align-content: center; }
+  .dbField > .dbSide.l { grid-column: 1; grid-row: 1; } .dbField > .dbSide.r { grid-column: 2; grid-row: 1; }
+  .dbField > :nth-child(2) { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
+  .dbPortrait { width: 120px; height: 120px; } .dbInfo { width: 100%; padding: 6px 8px; } .dbInfo b { font-size: 14px; }
+  .hand { gap: 6px; width: 100%; } .dcard { min-width: 0; flex: 1 1 0; width: auto; }
+}
+@media (max-width: 700px) {
+  /* 「다음 달」은 어디까지 내려가도 누를 수 있게 오른쪽 아래에 띄운다 */
+  .hbtns #btnEnd { position: fixed; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 40; margin: 0; padding: 12px 20px; font-size: 16px; border-radius: 14px; box-shadow: 0 6px 22px #000c, 0 0 0 1px #e2b75a66; }
+  #side { padding-bottom: 84px; }
+}

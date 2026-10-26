@@ -19,6 +19,9 @@
   "eval": "Sound.amb('amb_wind'); const t0=Date.now(); while (Date.now()-t0<20000 && !(Sound.state().ambVol >= Sound.pref.bgm-0.01)) await new Promise(r=>setTimeout(r,100)); const on=Sound.state(); Sound.stopAmb(); await new Promise(r=>setTimeout(r,900)); return 'AMB ' + on.amb + ' vol=' + on.ambVol + ' stopped=' + (Sound.state().amb===null) + ' ok=' + (on.ambVol >= Sound.pref.bgm-0.01);"
  },
  {
-  "eval": "const el = Sound.sfx('hit'); await new Promise(r=>setTimeout(r,300)); const r = 'SFX playing=' + !!(el && !el.paused || el && el.ended) + ' vol=' + (el ? el.volume.toFixed(2) : 'null'); Sound.setMuted(true); return r;"
+  "eval": "const el = Sound.sfx('hit'); await new Promise(r=>setTimeout(r,300)); const r = 'SFX playing=' + !!(el && !el.paused || el && el.ended) + ' vol=' + (el ? el.volume.toFixed(2) : 'null'); return r;"
+ },
+ {
+  "eval": "window.dispatchEvent(new Event('blur')); await new Promise(r=>setTimeout(r,300)); const a=Sound.state(); const s=Sound.sfx('click'); Sound.bgm('map1', true); window.dispatchEvent(new Event('focus')); const t0=Date.now(); while (Date.now()-t0<15000 && !(Sound.state().bgm==='map1' && Sound.state().bgmPlaying)) await new Promise(r=>setTimeout(r,100)); const b=Sound.state(); Sound.setMuted(true); return 'AWAY paused=' + (a.away && !a.bgmPlaying) + ' sfxBlocked=' + (s===null) + ' resumed=' + (!b.away && b.bgm==='map1' && b.bgmPlaying);"
  }
 ]

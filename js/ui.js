@@ -55,6 +55,8 @@ function fontsFor(text) {
   const t = Array.from(new Set(String(text))).join("");
   return Promise.race([Promise.all(['800 18px "Nanum Myeongjo"', '700 18px "Nanum Myeongjo"', '500 16px "Noto Sans KR"'].map((f) => document.fonts.load(f, t).catch(() => {}))), new Promise((r) => setTimeout(r, 2500))]);
 }
+// SD 무대의 세로 시야(월드 단위): 세로로 긴 화면에서는 가로 시야가 minW 이상이 되도록 넓힌다
+function stageUnits(el, base, minW) { const w = el.clientWidth || 1, hh = el.clientHeight || 1; return Math.max(base, minW * hh / w); }
 function icon(name, size = 22) { return h("img", { class: "ico", src: `assets/icon/${name}.webp`, style: `width:${size}px;height:${size}px`, alt: "" }); }
 
 // 5각형 능력 레이더
@@ -274,20 +276,22 @@ const UI = {
       h("div", { class: "cvList" }, enemyHidden ? h("span", { class: "muted" }, "철충 지역 — 정보 없음") : here.map((u) => h("button", { class: "chip" + (u.fac ? "" : " free"), onclick: () => this.unitDetail(u.id) }, sdface(u, 40), h("span", null, u.name)))));
     document.body.append(el);
     if (typeof Stage !== "undefined" && Stage.ok && shown.length) {
-      st = Stage.create(stage, { height: 8 });
-      const n = shown.length;
+      const narrow = stage.clientWidth < 600;
+      st = Stage.create(stage, { height: stageUnits(stage, 8, 9) });
+      const yb = st.camera ? st.camera.bottom : -4; // 무대 바닥 (세로 화면에서는 무대가 높아진다)
+      const n = narrow ? Math.min(shown.length, 8) : shown.length; const split = narrow ? 4 : 6;
       const lab = stage.querySelector(".cvLabels");
-      shown.forEach((u, i) => {
+      shown.slice(0, n).forEach((u, i) => {
         const W = st.camera ? st.camera.right - st.camera.left : 14;
-        const back = n > 6 && i >= Math.ceil(n / 2); const rowN = n > 6 ? (back ? n - Math.ceil(n / 2) : Math.ceil(n / 2)) : n; const j = back ? i - Math.ceil(n / 2) : i;
+        const back = n > split && i >= Math.ceil(n / 2); const rowN = n > split ? (back ? n - Math.ceil(n / 2) : Math.ceil(n / 2)) : n; const j = back ? i - Math.ceil(n / 2) : i;
         const gap = Math.min(2.6, (W * 0.74) / Math.max(1, rowN - 1 || 1));
         const x = (j - (rowN - 1) / 2) * gap + (back ? gap / 2 : 0);
-        const y = back ? -1.1 : -2.6;
+        const y = yb + (back ? 2.9 : 1.4);
         const a = st.add(u.id, x, y, (isLord(u) ? 2.6 : 2.25) * (back ? 0.82 : 1), x <= 0 ? 1 : -1, { z: back ? 5 : 12 });
         const tag = h("div", { class: "cvTag" + (isLord(u) ? " lord" : "") + (u.fac ? "" : " free"), onclick: () => this.unitDetail(u.id) }, gradeBadge(u), h("b", null, u.name), h("small", null, statusOf(u)));
         lab.append(tag);
         if (back) tag.classList.add("back");
-        const pos = () => { if (!st || !st.alive) return; const q = back ? st.toScreen(a.x, a.y + a.h * 1.02) : st.toScreen(a.x, a.y - 0.15); tag.style.transform = `translate(${q.x}px, ${back ? q.y - 44 : q.y}px)`; requestAnimationFrame(pos); };
+        const pos = () => { if (!st || !st.alive) return; const q = back ? st.toScreen(a.x, a.y + a.h * 1.02) : st.toScreen(a.x, a.y - 0.15); const qx = Math.max(44, Math.min(st.w - 44, q.x)); /* 좁은 화면에서 이름표가 잘리지 않게 */ tag.style.transform = `translate(${qx}px, ${back ? q.y - 44 : q.y}px)`; requestAnimationFrame(pos); };
         requestAnimationFrame(pos);
         setTimeout(() => st && st.alive && st.play(a, Math.random() < 0.5 ? "win" : "idle"), 600 + i * 220);
       });
@@ -311,10 +315,11 @@ const UI = {
       const content = h("div", { class: "vnContent" });
       el.append(stageBox, content);
       document.body.append(el);
-      const st = typeof Stage !== "undefined" && Stage.ok ? Stage.create(stageBox, { height: 8 }) : null;
+      const st = typeof Stage !== "undefined" && Stage.ok ? Stage.create(stageBox, { height: stageUnits(stageBox, 8, 7.2) }) : null;
+      const yb = st && st.camera ? st.camera.bottom + 0.1 : -3.9; // 무대 바닥 (세로 화면에서는 무대가 높아진다)
       if (st && window.SD) await Promise.race([Promise.all(speakers.map((u) => Stage.rigOf(u.id)).filter(Boolean).map((id) => SD.prepare(id))), new Promise((r) => setTimeout(r, 2500))]);
       const actors = {};
-      if (st && e.cast) { const W = st.camera.right - st.camera.left; e.cast.forEach((id, k) => { if (!U(id) || !Stage.rigOf(id)) return; const side = k % 2 ? 1 : -1; const a = actors[id] = st.add(id, side * W * 0.27, -3.9, 5.4, -side, { z: 10 }); setTimeout(() => a.sd && a.sd.setTint(0.38, 0.38, 0.44), 50); }); }
+      if (st && e.cast) { const W = st.camera.right - st.camera.left; e.cast.forEach((id, k) => { if (!U(id) || !Stage.rigOf(id)) return; const side = k % 2 ? 1 : -1; const a = actors[id] = st.add(id, side * W * 0.27, yb, 5.4, -side, { z: 10 }); setTimeout(() => a.sd && a.sd.setTint(0.38, 0.38, 0.44), 50); }); }
       let i = 0, typing = null;
       const lines = e.lines;
       const finish = () => { clearInterval(typing); el.classList.add("out"); Sound.stopAmb(); if ((ironScene || e.bgm) && G) this.mapBgm(); setTimeout(() => { if (st) st.destroy(); el.remove(); res(); }, 260); };
@@ -328,16 +333,16 @@ const UI = {
         const useSd = st && u && Stage.rigOf(u.id) && SD.ready(Stage.rigOf(u.id));
         if (st) {
           // 말하는 SD는 밝게, 나머지는 어둡게
-          for (const k in actors) { const a = actors[k]; if (a.sd) a.sd.setTint(0.38, 0.38, 0.44); a.y = -3.9; }
+          for (const k in actors) { const a = actors[k]; if (a.sd) a.sd.setTint(0.38, 0.38, 0.44); a.y = yb; }
           if (useSd) {
             let a = actors[u.id];
             if (!a) {
               const W = st.camera.right - st.camera.left;
-              a = actors[u.id] = st.add(u.id, side * W * 0.27, -3.9, 5.4, -side, { z: 10 });
+              a = actors[u.id] = st.add(u.id, side * W * 0.27, yb, 5.4, -side, { z: 10 });
               st.play(a, "win");
             }
             if (a.sd) a.sd.setTint(1, 1, 1);
-            a.y = -3.75;
+            a.y = yb + 0.15;
             if (L.voice) st.play(a, Math.random() < 0.5 ? "win" : "atk");
           }
         }
@@ -474,6 +479,12 @@ const UI = {
       }
       svg.append(g);
     }
+    const mw = $("#mapWrap");
+    if (mw && mw.scrollWidth > mw.clientWidth + 4 && this.mapCentered !== G.player + P().city) {
+      this.mapCentered = G.player + P().city;
+      const c = C(this.sel || P().city) || C(P().city);
+      mw.scrollLeft = Math.max(0, c.x / 1060 * mw.scrollWidth - mw.clientWidth / 2);
+    }
   },
 
   tip(e, c) {
@@ -487,8 +498,9 @@ const UI = {
       c.name === p.city ? h("div", { class: "gold" }, "현재 위치") : adj ? h("div", { class: "gold" }, "인접 — 이동/출진 가능") : (() => { const r = routeTo(p.city, c.name); return r ? h("div", { class: "muted small" }, `이동 ${r.length}구간 · 행동력 ${moveCost(r)}`) : null; })(), h("div", { class: "muted small" }, "더블클릭: 도시 보기")].filter(Boolean));
     const r = $("#mapWrap").getBoundingClientRect();
     t.style.display = "block";
+    const sx = $("#mapWrap").scrollLeft; // 세로 화면에서는 지도를 옆으로 밀어 보므로 그만큼 더한다
     const x = e.clientX - r.left + 16, y = e.clientY - r.top + 12;
-    t.style.left = Math.min(x, r.width - 190) + "px"; t.style.top = Math.min(y, r.height - 130) + "px";
+    t.style.left = Math.min(x, r.width - 190) + sx + "px"; t.style.top = Math.min(y, r.height - 130) + "px";
   },
 
   renderSide() {

@@ -23,10 +23,12 @@ const steps = [
 if (!noshot) steps.push(
   ["smoke (군주 노선 · 단축키)", ["tools/shot.mjs", "tools/smoke.json", tmp], (r) => /메인 서사/.test(r.out) && /KEYS chron=true esc=true tab=mil next=true/.test(r.out), (r) => evals(r.out)],
   ["smoke (진언 보류)", ["tools/shot.mjs", "tools/smoke_advise.json", tmp], (r) => /나: 진언/.test(r.out), (r) => evals(r.out)],
-  ["audio (덕킹 · 전환 · 효과음)", ["tools/shot.mjs", "tools/audio_check.json", tmp], (r) => { const db = +((r.out.match(/\((-?[\d.]+)dB\)/) || [])[1]); const fin = +((r.out.match(/fadeIn=(\d+)ms/) || [])[1]); return /restored=true/.test(r.out) && /ok=true/.test(r.out) && /SFX playing=true/.test(r.out) && /AMB amb_wind vol=[\d.]+ stopped=true ok=true/.test(r.out) && db <= -6 && db >= -10 && fin <= 6000; }, (r) => evals(r.out)],
+  ["audio (덕킹 · 전환 · 효과음 · 포커스 잃으면 멈춤)", ["tools/shot.mjs", "tools/audio_check.json", tmp], (r) => { const db = +((r.out.match(/\((-?[\d.]+)dB\)/) || [])[1]); const fin = +((r.out.match(/fadeIn=(\d+)ms/) || [])[1]); return /restored=true/.test(r.out) && /ok=true/.test(r.out) && /SFX playing=true/.test(r.out) && /AMB amb_wind vol=[\d.]+ stopped=true ok=true/.test(r.out) && /AWAY paused=true sfxBlocked=true resumed=true/.test(r.out) && db <= -6 && db >= -10 && fin <= 6000; }, (r) => evals(r.out)],
   ["해상도 1280×720", ["tools/shot.mjs", "tools/smoke_res.json", tmp], (r) => /hdrOverflow=false docScroll=false overflowEls=0/.test(r.out) && /modal \d+,\d+ \/ 720/.test(r.out), (r) => evals(r.out), { W: "1280", H: "720" }],
   ["해상도 1920×1080", ["tools/shot.mjs", "tools/smoke_res.json", tmp], (r) => /hdrOverflow=false docScroll=false overflowEls=0/.test(r.out), (r) => evals(r.out), { W: "1920", H: "1080" }],
   ["야전 (개전 · 무장기 · 결과 · 복귀)", ["tools/shot.mjs", "tools/smoke_field.json", tmp], (r) => /prep true/.test(r.out) && /bake ok=true/.test(r.out) && /cast true/.test(r.out) && /RESULT VICTORY/.test(r.out) && /done=1 fieldOpen=false/.test(r.out), (r) => evals(r.out)],
+  // 휴대폰 세로 화면(412×915, 터치·화면 배율 2): 버튼 글자 꺾임, 「다음 달」 노출, 지도 밀어 보기, 대화·도시·설전 배치, 무대 배율
+  ["휴대폰 세로 화면", ["tools/shot.mjs", "tools/smoke_mobile.json", tmp], (r) => (r.out.match(/ok=true/g) || []).length === 5 && !/ok=false/.test(r.out), (r) => evals(r.out), { W: "412", H: "915", MOBILE: "1" }],
   ["smoke (독립 후 노선 · 엔딩)", ["tools/shot.mjs", "tools/smoke_end.json", tmp], (r) => /새 세력의 노선/.test(r.out) && /routeLine=함께 살아/.test(r.out), (r) => evals(r.out)],
 );
 let fail = 0;
