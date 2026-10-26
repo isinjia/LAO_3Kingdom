@@ -1030,3 +1030,33 @@ body:has(#field.on) .cutin { top: calc(var(--fhead, 72px) + 2px); height: 150px;
   .rmTog { padding: 4px 8px; font-size: 11.5px; } .rmNav button { padding: 5px 9px; font-size: 12px; }
   .rmName b { font-size: 11px; } .rmName small { font-size: 10px; }
 }
+
+/* ── 실시간 진행: 시계와 지도 위의 행군 ── */
+body.rtOn #btnEnd { display: none; }
+.rtCtl { display: none; align-items: center; gap: 3px; }
+body.rtOn .rtCtl { display: inline-flex; }
+.rtCtl button { padding: 5px 9px; min-width: 32px; }
+.rtCtl .rtPlay { font-size: 15px; background: linear-gradient(#e0b960, #a77b25); border-color: #f6dc94; color: #1a1205; font-weight: 800; }
+.rtCtl .rtPlay:not(.on) { animation: rtBlink 1.2s infinite; }
+@keyframes rtBlink { 50% { filter: brightness(1.35); box-shadow: 0 0 12px #f6dc9488; } }
+.rtCtl .rtSpd { letter-spacing: -2px; font-size: 12px; color: var(--muted); }
+.rtCtl .rtSpd.on { color: var(--gold2); border-color: var(--gold); background: linear-gradient(#3a3020, #241c10); }
+.rtTrip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 9px; margin-right: 4px; border-radius: 7px; background: #1c3a4a; border: 1px solid #5fd0e688; color: #bfefff; font-size: 12px; white-space: nowrap; }
+#rtDayBar { display: block; width: 100%; height: 3px; margin-top: 2px; border-radius: 2px; background: #ffffff1a; overflow: hidden; }
+#rtDayBar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold2)); }
+.rtTrail { stroke-width: 3.5; stroke-dasharray: 3 7; stroke-linecap: round; opacity: .75; pointer-events: none; }
+.rtTrail.me { stroke: #7fe3ff; stroke-width: 3; stroke-dasharray: 4 5; animation: rtDash 1s linear infinite; }
+.rtTrail.hit { stroke-width: 3.5; opacity: 1; animation: rtDash .8s linear infinite; }
+@keyframes rtDash { to { stroke-dashoffset: -18; } }
+.rtArmy { filter: drop-shadow(0 2px 3px #000); cursor: help; }
+.rtArmy .rtFlag { stroke: #000c; stroke-width: 1.2; }
+.rtArmy.hit .rtFlag { stroke: #ff5050; stroke-width: 2.2; }
+.rtArmy .rtNum { font: 800 8.5px var(--sans); fill: #fff; text-anchor: middle; paint-order: stroke; stroke: #000b; stroke-width: 2.2px; pointer-events: none; }
+.rtMeRing { fill: #0b1a22; stroke: #7fe3ff; stroke-width: 2.5; filter: drop-shadow(0 0 6px #7fe3ffaa); }
+@media (max-width: 700px) { .rtCtl button { padding: 5px 7px; min-width: 28px; } .rtTrip { font-size: 11px; } }
+@media (max-width: 700px) {
+  /* 시간 조작도 「다음 달」 자리처럼 오른쪽 아래에 띄운다 */
+  body.rtOn .rtCtl { position: fixed; right: 10px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 40; padding: 6px; gap: 4px; border-radius: 14px; background: #0d1117ee; border: 1px solid #e2b75a66; box-shadow: 0 6px 22px #000c; flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 20px); }
+  body.rtOn .rtCtl button { padding: 9px 11px; font-size: 14px; }
+  body.rtOn .rtCtl .rtPlay { padding: 9px 16px; font-size: 17px; }
+}

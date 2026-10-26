@@ -206,6 +206,7 @@ const UI = {
   begin(ronin) {
     Sound.sfx("start");
     newGame(this.pickId, { diff: this.diff, ronin });
+    if (typeof rtInit === "function") { rtInit(); this.rtStart(); } // 실시간 진행
     let clears = 0; try { clears = +(localStorage.getItem("lao3k_clear") || 0); } catch (er) {}
     if (clears > 0) { P().gold += 300 * Math.min(3, clears); gainItem(randItem([0, 30, 50, 20]), `다회차 보너스 (클리어 ${clears}회)`); }
     this.sel = P().city;
@@ -403,6 +404,8 @@ const UI = {
     $("#hdrUnify").innerHTML = ""; $("#hdrUnify").append(h("i", null, "통일"), h("b", null, `${owned}/32`), h("div", { class: "uniBar" }, h("i", { style: `width:${owned / 32 * 100}%` })));
     $("#btnDiplo").style.display = isLord(p) ? "" : "none";
     $("#btnSound").textContent = Sound.pref.muted ? "🔇" : "🔊";
+    document.body.classList.toggle("rtOn", !!G.rt);
+    if (G.rt) { $("#hdrDate").append(h("span", { id: "rtDayBar", title: "이번 달 진행" }, h("i", { style: `width:${(G.day || 0) / 30 * 100}%` }))); this.rtControls && this.rtControls(); }
   },
 
   renderMap() {
@@ -770,7 +773,7 @@ const UI = {
       [".cmds", "내정·군사·개인 명령. 아이콘 아래 숫자는 행동력 비용이에요. 결과는 화면 위 토스트로 보여요."],
       [".hereSum", "지금 있는 거점의 병력·자금·식량. 누르면 지도에 거점 정보 카드가 떠요."],
       ["#map", "지도: 거점을 누르면 바로 옆에 정보 카드(배너를 누르면 도시 보기, 빈 곳·Esc로 닫기), 두 번 누르면 도시 보기. 길이 이어진 거점이면 어디든 이동할 수 있고(멀면 여러 달), 인접한 적 거점에는 출진할 수 있어요."],
-      ["#btnEnd", "행동력을 다 쓰면 「다음 달」. 정세 보고와 이벤트가 이어져요. 막히면 「?」 가이드!"],
+      ["#rtCtl", "시간은 저절로 흘러요(보통 하루 1초). ⏸로 멈추고 ▸▸ 로 빠르게, ⏭는 이번 달 남은 날을 건너뛰어요. 행동력은 하루에 약 3씩 차고, 군대는 지도 위를 행군해요. 막히면 「?」 가이드!"],
     ];
     let i = 0;
     const tip = h("div", { class: "tut" });
@@ -1105,6 +1108,10 @@ const UI = {
   moveInfo(name) {
     const p = P(); if (name === p.city) return null;
     const path = routeTo(p.city, name); if (!path) return null;
+    if (G.rt) { // 실시간: 출발에 행동력 15, 길은 며칠에 걸쳐 간다
+      const days = pathDays(p.city, path);
+      return { path, cost: MOVE_START, title: `${path.join(" → ")} · 약 ${days}일 · 행동력 ${MOVE_START}`, reason: p.trip ? `${jo(p.trip.to, "으로")} 가는 중` : G.ap < MOVE_START ? `행동력 부족 (출발에 ${MOVE_START} 필요)` : null, label: `이동 (${days}일)` };
+    }
     const cost = moveCost(path); const now = Math.min(path.length, Math.max(0, Math.floor((G.ap - MOVE_START) / MOVE_HOP)));
     const title = `${path.join(" → ")} · 행동력 ${cost}${now < path.length ? ` (이번 달 ${now}구간, 나머지는 다음 달에 이어 감)` : ""}`;
     return { path, cost, title, reason: G.ap < MOVE_START + MOVE_HOP ? `행동력 부족 (출발에 ${MOVE_START + MOVE_HOP} 필요)` : null, label: `이동 (${path.length > 1 ? `${path.length}구간 · ` : ""}${cost})` };
@@ -1324,7 +1331,7 @@ const UI = {
 
   help(tab = 0) {
     const T = [
-      ["기본 흐름", [["행동력", "매달 100. 명령마다 행동력을 쓰고, 다 쓰면 「다음 달 ▶」. 매달 자동 저장된다."], ["신분", "재야 → 사관 → 승진(종사·교위·편장군·장군·대장군) → 태수 임명 → 독립 또는 군주."], ["평정", "사관 중이면 매달 임무 3개 중 하나를 고른다. 2개월 안에 달성하면 큰 공적."], ["승리", "32개 거점을 모두 손에 넣으면 천하통일. 철충을 섬멸하고 20거점 이상을 확보해도 ‘패권 승리’."]]],
+      ["기본 흐름", [["시간과 행동력", "시간은 실시간으로 흐른다 — 하루가 보통 1초(▸), 빠름 0.45초(▸▸), 매우 빠름 0.18초(▸▸▸). ⏸(스페이스)로 멈추고, ⏭로 이번 달 남은 날을 한꺼번에 보낸다. 창이나 대화가 열려 있으면 저절로 멈춘다. 행동력은 최대 100, 하루에 약 3씩(한 달에 100) 찬다. 30일이 지나면 정세 보고·평정·이벤트가 이어지고 자동 저장된다."], ["행군과 이동", "세력들은 달 중에 출진해 지도 위를 며칠에 걸쳐 행군하고, 도착한 날 싸운다(깃발에 병력 수). 내 거점으로 오는 군대는 빨간 선으로 보인다. 나도 이동하면 길을 따라 며칠에 걸쳐 가며(출발에 행동력 15), 가는 동안에는 다른 명령을 할 수 없다 — 머리막대의 「멈추기」로 그 자리에 멈춘다."], ["신분", "재야 → 사관 → 승진(종사·교위·편장군·장군·대장군) → 태수 임명 → 독립 또는 군주."], ["평정", "사관 중이면 매달 임무 3개 중 하나를 고른다. 2개월 안에 달성하면 큰 공적."], ["승리", "32개 거점을 모두 손에 넣으면 천하통일. 철충을 섬멸하고 20거점 이상을 확보해도 ‘패권 승리’."]]],
       ["내정·인물", [["내정", "농업(식량)·상업(자금)·기술·치안·방벽·징병. 특기가 있으면 효과 1.5배. 거점 자금 50 필요."], ["탐방", "재야 인재 발견, 자금·전술 데이터 입수. 재야 장수는 지도의 인물 목록에서 점선 테두리."], ["교류", "친밀도를 올린다. 교류할 때마다 짧은 대화가 열리고, 고민 상담·대련·바둑·요리 시식·산책·부탁·내기·다툼 중재 같은 일이 생기기도 한다. 고르는 대답에 따라 친밀·능력 경험·자금이 달라지며, 상대의 성격에 맞는 대답일수록 더 가까워진다. 말투(반말·존댓말·군대식 등)와 서로 부르는 호칭은 원작 스토리 대본에서 정리한 자료를 따르고, 원작에서 가까웠던 사이는 처음부터 친밀이 조금 높다. 50이면 개인 대화, 100이면 의자매(義) — 거병·독립 때 함께한다."], ["등용·사관", "대화로 확률 판정, 또는 설전에서 이기면 확정. 매력·친밀·명성이 성공률을 높인다."]]],
       ["장수제", [["이동", "지도 어디든 길을 따라 갈 수 있다(철충 거점은 지나갈 수 없음). 출발 15 + 구간마다 행동력 15. 행동력이 모자라면 남은 길은 다음 달 초에 이어 간다. 다른 세력 거점에서는 방문·교류·탐방만 하고 내정은 할 수 없다. 태수가 거점을 떠나면 태수 자리를 내놓는다."], ["신분과 권한", "재야 → 일반 → 중신(편장군 이상) → 태수 → 도독 → 군주. 신분이 오를수록 쓸 수 있는 명령이 늘어난다. 「임무」 탭(4)의 「위명·권한」에서 권한표를 볼 수 있다."], ["임무", "상관이 임무를 내리고, 중신은 직접 제안할 수 있다. 태수 이상은 관할 장수에게 발령한다. 수행 장수의 능력치로 매일 진행되고(한 달 30일), 친우 이상인 협력자가 있으면 빨라진다."], ["평정", "분기마다 세력의 전략 목표(내정 강화·군비 확충·인재 확보·수비 강화·공략)를 정한다. 중신은 의견을 내고, 군주는 직접 결정한다. 목표는 장수들의 실제 행동을 바꾼다."], ["인간관계", "교류·선물·연회·함께 하는 임무·함께 싸운 전투로 가까워지고, 적장으로 맞서면 적대가 쌓인다. 친우·막역지우·의자매 단계가 있고, 장수끼리도 관계를 맺어 등용·이적·독립에 영향을 준다. 「관계도」(장수 정보에서도 열 수 있다)에서 가운데 장수와 이어진 장수들을 선으로 본다 — 선 색은 관계 단계, 물결선은 원작에서 서로 부르던 사이, 겹선은 의자매. 장수를 한 번 누르면 정보, 한 번 더 누르면 그 장수가 가운데로 온다."], ["위명", "무관·문관·군사·장군·협객·상인 6계통. 실적이 쌓이면 상위 위명이 되고 새 명령이나 효과가 열린다. 협객(의협 활동)·상인(교역)은 재야에서도 걸을 수 있는 길이다."], ["질병·사망·후계", "장수는 병에 걸리기도 하고, 앓는 동안 세상을 떠날 수 있다. 같은 거점이면 병문안(행동력 15)으로 위험을 줄인다. 군주가 죽으면 공적·관계로 후계자가 정해지고(내가 될 수도 있다), 새 군주를 따르지 않는 장수는 떠나거나 독립한다. 나는 죽지 않지만 병에 걸리면 행동력이 줄고, 휴식하면 빨리 낫는다."], ["수행·평정 설전·외교", "「수행」은 이번 달 남은 행동력을 모두 써서 무예·학문을 닦고 특기를 익힌다. 평정에서 의견을 내면 다른 중신이 반론하기도 하는데, 설전으로 이기면 의견이 채택된다. 「친선 사절」 임무가 성공하면 그 세력과 12개월 휴전한다."], ["개인 이벤트", "매달 초 연회 초대·부탁·인재 추천·일기토 신청·설전 신청·이적 권유·독립 권유·재해·신하의 청원·도적 출몰·떠돌이 상인·병상의 소식 중 하나가 찾아오기도 한다. 내 세력에서 반란이 일어나면 진압 여부를 고른다. 수락하느냐에 따라 관계·공적·소속이 달라진다. 12월에는 논공행상으로 한 해의 공을 따진다."], ["세계", "장수마다 성격·야망·의리가 있다. 충성은 매달 군주와의 관계·대우에 따라 변하고, 충성이 낮으면 하야하거나 친구가 있는 세력으로 떠난다. 야망이 큰 태수는 독립하기도 한다."]]],
       ["전쟁", [["출진", "태수·군주는 인접 거점으로 출진. 일반 장수는 「출진 상신」으로 승인받으면 총대장이 된다."], ["병종 상성", "경장 ▶ 기동 ▶ 중장 ▶ 경장. 우위면 피해 +20%, 열세면 −15%."], ["역할", "공격기: 피해 +10% · 보호기: 받는 피해 −12% · 지원기: 방어 시 아군 전체 사기 회복, 책략 성공률 +10%."], ["부대 결속", "원작에서 같은 부대(스틸 라인, 둠 브링어 등)인 장수가 함께 출진하면 1명당 공격력 +7%."], ["승패", "공격측은 10턴 안에 수비군 전멸 또는 수비 총대장 격파. 총대장이 패주하면 그 군은 패배."]]],
@@ -1456,11 +1463,12 @@ window.addEventListener("DOMContentLoaded", () => {
     if (missing.length) { const bt = document.getElementById("boot"); if (bt) { bt.style.display = ""; bt.classList.remove("hide"); bt.innerHTML = `<b>라스트오리진 삼국지</b><span>일부 파일을 불러오지 못했습니다 (${missing.join(", ")})</span><button class="primary" onclick="location.reload()">다시 불러오기</button>`; } return; }
   }
   $("#btnNew").onclick = () => { Sound.sfx("open"); UI.prologue(); };
-  $("#btnContinue").onclick = () => { if (loadGame()) { Sound.sfx("start"); UI.sel = P().city; UI.show("main"); UI.mapBgm(); UI.render(); } };
+  $("#btnContinue").onclick = () => { if (loadGame()) { Sound.sfx("start"); if (typeof rtInit === "function") { rtInit(); UI.rtStart(); } UI.sel = P().city; UI.show("main"); UI.mapBgm(); UI.render(); } };
   $("#btnTitleSet").onclick = () => UI.settings();
   { const rb = document.createElement("button"); rb.id = "btnTitleRec"; rb.textContent = "기록실"; rb.onclick = () => UI.records(); const ref = $("#btnTitleSet"); if (ref) ref.after(rb); }
   $("#selSearch").oninput = () => UI.select();
   $("#btnEnd").onclick = () => {
+    if (G && G.rt) { UI.rtSpeed = UI.rtSpeed ? 0 : UI.rtLastSpeed || 1; Sound.sfx("click", 0.5); UI.rtControls(); return; } // 실시간: 진행/멈춤
     if (UI.flushing || G.missionOffer) { if (G.missionOffer) UI.message("평정", "먼저 이번 달 임무를 선택하세요."); return; }
     Sound.sfx("turn");
     endMonth(); saveGame(); UI.sel = UI.sel || P().city; UI.after();

@@ -271,7 +271,8 @@ function addMerit(u, v) {
 
 // ── 플레이어 행동 ─────────────────────────
 function spend(cost) {
-  if (G.ap < cost) { notify("행동력 부족", `이번 달에 남은 행동력이 부족하다. (필요 ${cost} / 남음 ${G.ap})`); return false; }
+  if (G.rt && P().trip) { notify("이동 중", `${jo(P().trip.to, "으로")} 가는 길이다. 도착하거나 이동을 멈춘 뒤에 할 수 있다.`); return false; }
+  if (G.ap < cost) { notify("행동력 부족", G.rt ? `행동력이 부족하다. (필요 ${cost} / 남음 ${G.ap}) 행동력은 하루에 약 3씩 찬다.` : `이번 달에 남은 행동력이 부족하다. (필요 ${cost} / 남음 ${G.ap})`); return false; }
   G.ap -= cost; return true;
 }
 
@@ -619,7 +620,7 @@ function endMonth() {
   if (G.over) return;
   G.report = []; G.lastWars = [];
   for (const k of Object.keys(G.truce)) { if (--G.truce[k] <= 0) { delete G.truce[k]; log(`${jo(F(k) ? F(k).name : k, "와과")}의 휴전이 만료되었다.`, "war"); } }
-  if (typeof officerTick === "function") officerTick(); // 임무: 30일을 하루씩 진행
+  if (typeof officerTick === "function" && !G.rt) officerTick(); // 임무: 30일을 하루씩 진행 (실시간이면 날마다 이미 진행)
   aiDevelopment();
   aiFreeUnits();
   economy();
@@ -630,7 +631,7 @@ function endMonth() {
   checkFactions();
   // 다음 달
   G.month++; if (G.month > 12) { G.month = 1; G.year++; }
-  G.ap = AP_MAX;
+  if (!G.rt) G.ap = AP_MAX; // 실시간이면 행동력은 날마다 조금씩 찬다
   if (typeof officerNewMonth === "function") officerNewMonth(); // 병·수행의 행동력 감소, 이어 가던 길
   const p = P(); p.hp = clamp(p.hp + 15, 0, 100);
   if (G.mission && G.year * 12 + G.month > G.mission.deadline) {
@@ -786,6 +787,7 @@ function aiWar() {
     const atk = pickArmy(from.name, f.key, send, 5, drafted ? p : null);
     if (!atk.length && !f.iron) continue;
     const war = { atkFac: f.key, from: from.name, to: to.name, atk, sent: send };
+    if (G.rt && typeof scheduleMarch === "function") { scheduleMarch(war); continue; } // 실시간: 다음 달 중에 출발해 지도 위를 행군한다
     const playerDefends = to.owner && p.fac === to.owner && p.city === to.name;
     if (drafted || playerDefends) {
       from.troops -= atk.reduce((s, x) => s + x.troops, 0) || send;

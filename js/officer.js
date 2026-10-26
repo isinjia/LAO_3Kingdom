@@ -162,7 +162,7 @@ const fameDevMult = (u) => (u.id === G.player && fameTier(u, "문관") >= 2 ? 1.
 const riseNeed = () => (hasFame("협객", 2) ? 250 : 400);
 
 // ── 날짜 (한 달 = 30일, 행동력을 쓸수록 하루하루가 지난다) ──
-const dayNow = () => ((G.year - 1) * 12 + (G.month - 1)) * 30 + Math.min(29, Math.floor((AP_MAX - G.ap) * 29 / AP_MAX));
+const dayNow = () => ((G.year - 1) * 12 + (G.month - 1)) * 30 + Math.min(29, G.rt ? G.day || 0 : Math.floor((AP_MAX - G.ap) * 29 / AP_MAX)); // 실시간 진행이면 실제 날짜
 const monthStartDay = () => ((G.year - 1) * 12 + (G.month - 1)) * 30;
 const dayStr = (d) => `${Math.floor(d / 360) + 1}년 ${Math.floor((d % 360) / 30) + 1}월 ${(d % 30) + 1}일`;
 const todayStr = () => dayStr(dayNow());
@@ -758,9 +758,10 @@ function actTravel(to) {
   const p = P();
   const path = routeTo(p.city, to);
   if (!path) return notify("이동 불가", C(to) && C(to).owner && F(C(to).owner).iron ? "철충의 거점으로는 갈 수 없다." : "그곳으로 가는 길이 없다. (철충 거점은 지나갈 수 없다)");
-  if (G.ap < MOVE_START + MOVE_HOP) return notify("행동력 부족", `출발하려면 행동력 ${MOVE_START + MOVE_HOP}이 필요하다. (남음 ${G.ap})`);
+  if (G.ap < (G.rt ? MOVE_START : MOVE_START + MOVE_HOP)) return notify("행동력 부족", `출발하려면 행동력 ${G.rt ? MOVE_START : MOVE_START + MOVE_HOP}이 필요하다. (남음 ${G.ap})`);
   const t = playerTask();
   if (t && t.city === p.city) { if (t.doers[0] === p.id) G.tasks.splice(G.tasks.indexOf(t), 1); else t.doers = t.doers.filter((x) => x !== p.id); log(`거점을 떠나 임무 「${taskName(t)}」를 그만두었다.`, "bad"); }
+  if (G.rt && typeof rtTravel === "function") return rtTravel(to, path); // 실시간: 길을 따라 며칠에 걸쳐 간다
   const total = path.length; const from = p.city;
   const n = walk(path, MOVE_START);
   p.trip = path.length ? { to, path } : null;
@@ -1017,7 +1018,7 @@ function officerNewMonth() {
   const p = P();
   if (p.sick) { G.ap = Math.max(0, G.ap - 20); p.hp = Math.min(p.hp, 50); }
   if (p.away && p.away <= monthIdx()) { if (p.away === monthIdx()) { G.ap = Math.max(0, G.ap - 30); log("수행을 마치고 돌아오는 길이다. 행동력 -30"); } p.away = null; }
-  continueTrip();
+  if (!G.rt) continueTrip(); // 실시간 진행에서는 여정이 날마다 이어진다
 }
 
 // ── 수행: 이번 달 남은 행동력을 모두 써서 무예·학문을 닦는다 ──
