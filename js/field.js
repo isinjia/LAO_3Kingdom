@@ -377,14 +377,14 @@ const Field = {
         const px = s.x, py = s.y;
         const hx = Math.max(FLD.X0, Math.min(FLD.X1, g.ux + s.home.x)), hy = Math.max(FLD.Y0, Math.min(FLD.Y1, g.uy + s.home.y));
         const tgt = this.nearest(s, foes, sReach + leash, sReach + 1); // 병사는 적 병사를 먼저 노린다
-        if (tgt && this.d(s, tgt) <= sReach) {
+        if (tgt && this.d(s, tgt) <= sReach && !(C_.troop === 0 && Math.hypot(s.x - hx, s.y - hy) > leash * 0.7 + 0.8)) { /* 대기·집결 명령: 자리에서 멀어진 병사는 싸움을 끊고 돌아온다 (전열을 뺄 수 있게) */
           engaged++;
           // 경장 산개 사격: 근접 적이 바싹 붙으면 재장전하는 동안 한 걸음 물러나며 쏜다
           if (g.b.cls === 0 && s.cool > 0 && tgt.g.S.melee && this.d(s, tgt) < 1.0 && C_.troop >= 0) { this.moveToward(s, s.x - (tgt.x - s.x), s.y, spd * dt * 0.7); }
           if (s.cool <= 0) this.attack(g, s, tgt, false);
         }
         // 앞의 적에게 나설 때도 진형의 세로 자리(hy)와 앞뒤 간격을 지킨다 — 맞붙어도 한 줄로 늘어서지 않고 진형 모양이 남는다
-        else if (tgt && Math.hypot(s.x - hx, s.y - hy) < leash + 0.6) { this.moveToward(s, tgt.x - g.dir * Math.min(sReach * 0.7, 2.4) + s.home.x * 0.5, hy, spd * dt); }
+        else if (tgt && Math.hypot(s.x - hx, s.y - hy) < (C_.troop === 0 ? leash * 0.7 + 0.8 : leash + 0.6)) { this.moveToward(s, tgt.x - g.dir * Math.min(sReach * 0.7, 2.4) + s.home.x * 0.5, hy, spd * dt); }
         else { const dd = Math.hypot(hx - s.x, hy - s.y); if (dd > 0.08) this.moveToward(s, hx, hy, spd * dt * 1.15); } /* 자리 보정 같은 작은 움직임은 대기 자세로 (걷기·대기가 번갈아 다리가 깜빡이지 않게) */
         // 걷기/대기는 실제로 움직인 속도로 고른다 (빠르면 걸음도 빠르게. 자리 보정 같은 작은 움직임은 대기)
         { const v = Math.hypot(s.x - px, (s.y - py) / 0.7) / Math.max(1e-4, dt); s.mv = (s.mv || 0) * 0.75 + v * 0.25; const walk = s.spr && s.spr.anim === "move" ? s.mv > spd * 0.2 : s.mv > spd * 0.4; if ((s.spr && s.spr.idle !== !walk && this.t - (s.animT || -9) > 0.35) || (s.spr && s.spr.idle == null)) { s.animT = this.t; this.anim(s, walk ? "move" : "idle"); } /* 걷기/대기는 0.35초는 유지 */ if (s.spr) s.spr.rate = Math.max(0.6, Math.min(1.4, s.mv / spd)); }
@@ -1514,7 +1514,7 @@ const FUI = {
       if (rg) {
         const sel = F_.sel === g, w = (F_.isLead(g) ? 0.85 : 0.7) * (sel ? 1 + Math.sin(performance.now() / 180) * 0.08 : 1);
         if (rg.sel !== sel) { rg.sel = sel; rg.color(sel ? 0xffd36a : squadHex(g.sq)); }
-        rg.set(g.x, g.y, w, g.b.out ? 0 : sel ? 0.95 : 0.6);
+        rg.set(g.actor && g.actor.x != null ? g.actor.x + (g.actor.ox || 0) : g.x, g.actor && g.actor.y != null ? g.actor.y : g.y, w, g.b.out ? 0 : sel ? 0.95 : 0.6); /* 그려진 장수 발밑을 따라간다 (돌진·넉백 중에도) */
       }
       if (g.b.out) { el.style.opacity = 0; el.style.pointerEvents = "none"; continue; }
       const p = this.stage.toScreen(g.x, g.y + (g.vh || 1.4) + 0.25);
