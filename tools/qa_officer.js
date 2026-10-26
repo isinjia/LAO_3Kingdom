@@ -86,6 +86,30 @@ ok(saveGame(), "저장");
 G.rel = {}; G.tasks = []; p.fame = {};
 ok(loadGame(), "불러오기");
 ok(JSON.stringify(G.rel) === snap.rel && JSON.stringify(P().fame) === snap.fame && JSON.stringify(G.strat) === snap.strat && JSON.stringify(U(a.id).per) === snap.per && U(free.id).follow === snap.follow && G.tasks.some((t) => t.id === 999 && t.prog === 33), "관계·위명·평정·성격·임무가 저장에 포함");
+// ── 8-2) 개인 이벤트(삼국지 13식): 120개월 동안 나오는 이벤트를 무작위로 수락·거절해 본다
+{
+  const seen = {}; let award = 0, bad = 0;
+  for (const who of ["BR_Tomoe", "3P_Labiata"]) {
+    newGame(who, { diff: 1 }); P().gold = 3000;
+    for (let m = 0; m < 120 && !G.over; m++) {
+      endMonth();
+      for (const e of G.queue) {
+        if (e.title === "논공행상") award++;
+        if (e.type !== "oev") continue;
+        seen[e.key] = (seen[e.key] || 0) + 1;
+        if (!e.title || !e.text || !e.yes || !e.no) bad++;
+        const r = oevApply(e, Math.random() < 0.6, Math.random() < 0.5);
+        if (typeof r !== "string" || !r) bad++;
+      }
+      G.queue = []; G.over = false; if (P().gold < 300) P().gold += 500;
+    }
+  }
+  const kinds = Object.keys(seen);
+  ok(kinds.length >= 5 && bad === 0, "개인 이벤트 " + kinds.length + "종 발생·처리 (" + kinds.map((k) => k + " " + seen[k]).join(", ") + ")");
+  newGame("BR_Tomoe", { diff: 1 }); const pp = P(); pp.fac = "steel"; pp.city = citiesOf("steel")[0].name; G.month = 12; G.queue = []; const g0 = pp.gold;
+  officerEvents(); const aw = G.queue.find((e) => e.title === "논공행상");
+  ok(!!aw && pp.gold > g0, "12월 논공행상 → 상금 (" + (pp.gold - g0) + ")");
+}
 // ── 9) 세계가 스스로 돌아간다: 120개월 × 3판
 const W = { moves: 0, indep: 0, dudok: 0, strat: 0, oath: 0, alive: [] };
 for (let run = 0; run < 3; run++) {

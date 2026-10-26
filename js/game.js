@@ -639,6 +639,7 @@ function endMonth() {
   checkFacilityUps();
   checkGoals();
   if (typeof checkStoryEvents === "function") checkStoryEvents();
+  if (typeof officerEvents === "function") officerEvents(); // 개인 이벤트 (연회 초대·부탁·일기토 신청·재해 등)
   if (typeof applyTitle === "function") applyTitle();
   checkVictory();
   if (G.report.length) G.queue.unshift({ type: "report", items: G.report.slice() });

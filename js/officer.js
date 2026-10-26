@@ -750,3 +750,167 @@ function continueTrip() {
   else { log(`${p.trip.to}에 도착했다.`, "good"); p.trip = null; }
 }
 function cancelTrip() { const p = P(); if (p.trip) { log(`${jo(p.trip.to, "으로")} 가던 길을 멈췄다. (${p.city})`); p.trip = null; } }
+
+// ── 개인 이벤트 (삼국지 13식) ───────────────
+// 매달 초 하나까지. 큐 항목 {type:"oev", key, a, b, c, k, n, title, text, who, yes, no}
+// 선택은 UI가 받아 oevApply(e, 수락, 승패)로 반영한다
+const matesOf = (p) => unitsIn(p.city).filter((u) => u.id !== p.id && !u.iron && u.alive && !u.missing);
+const DISASTER = {
+  plague: { ko: "역병", d: "병사와 백성이 쓰러진다. (병력 -10% · 치안 -8)", hit: (c, k) => { const t = Math.round(c.troops * 0.1 * k), o = Math.round(8 * k); c.troops -= t; c.order = clamp(c.order - o, 0, 100); return `병력 -${t.toLocaleString()} · 치안 -${o}`; } },
+  locust: { ko: "메뚜기 떼", d: "들판이 쓸려 나간다. (식량 -25% · 농업 -10%)", hit: (c, k) => { const f = Math.round(c.food * 0.25 * k), a = Math.round(c.agri * 0.1 * k); c.food -= f; c.agri -= a; return `식량 -${f.toLocaleString()} · 농업 -${a}`; } },
+  flood: { ko: "홍수", d: "강이 넘쳐 성벽과 농지가 잠긴다. (방어 -15% · 농업 -8%)", hit: (c, k) => { const d = Math.round(c.def * 0.15 * k), a = Math.round(c.agri * 0.08 * k); c.def -= d; c.agri -= a; return `방어 -${d} · 농업 -${a}`; } },
+};
+const reliefCost = (p, c) => (p.fac === c.owner && (isGov(p) || isLord(p)) ? 300 : 150);
+const OEV = {
+  // 연회 초대: 친한 장수가 술자리에 부른다
+  banquet: { w: 3,
+    cond: (p) => { const u = pick(matesOf(p).filter((u) => u.bond >= 25 && relOf(p.id, u.id) > 0)); return u ? { a: u.id } : null; },
+    make: (p, e) => ({ title: "연회 초대", who: e.a, text: `${U(e.a).name}: "오늘 밤 조촐하게 한잔하려는데, 같이 할래?"\n\n참석하면 행동력 15 · 친밀이 오르고 다른 손님과도 안면을 튼다.`, yes: "참석한다", no: "사양한다" }),
+    apply: (p, e, ok) => {
+      const u = U(e.a);
+      if (!ok) { addRel(p.id, u.id, -2); return `${u.name}의 초대를 사양했다. 친밀 -2`; }
+      G.ap = Math.max(0, G.ap - 15); const g = rnd(5, 8); addRel(p.id, u.id, g); p.hp = clamp(p.hp + 5, 0, 100);
+      const o = pick(matesOf(p).filter((x) => x.id !== u.id)); if (o) addRel(p.id, o.id, 3);
+      return `${u.name}의 연회에 참석했다. 친밀 +${g}${o ? ` · ${o.name} 친밀 +3` : ""} · 체력 +5`;
+    } },
+  // 부탁: 아는 장수가 자금을 빌려 달라고 한다
+  favor: { w: 3,
+    cond: (p) => { const u = pick(matesOf(p).filter((u) => u.bond >= 15)); const n = rnd(10, 20) * 10; return u && p.gold >= n ? { a: u.id, n } : null; },
+    make: (p, e) => ({ title: "부탁", who: e.a, text: `${U(e.a).name}: "${pick(["부대 보급이 끊겨서… 이번 한 번만 도와줄 수 있을까?", "고장 난 장비를 고칠 돈이 모자라. 꼭 갚을게.", "후배들 먹일 식량값이 조금 모자라서…"])}"\n\n자금 ${e.n}을 건네면 친밀이 크게 오른다.`, yes: `자금 ${e.n}을 건넨다`, no: "거절한다" }),
+    apply: (p, e, ok) => {
+      const u = U(e.a);
+      if (!ok || p.gold < e.n) { addRel(p.id, u.id, -3); return `${u.name}의 부탁을 거절했다. 친밀 -3`; }
+      p.gold -= e.n; const g = rnd(8, 12); addRel(p.id, u.id, g); if (u.fac && u.fac === p.fac) u.loyal = clamp(u.loyal + 5, 0, 100);
+      return `${u.name}에게 자금 ${e.n}을 건넸다. 친밀 +${g}`;
+    } },
+  // 인재 추천: 친구가 아는 재야 인재를 소개한다
+  recommend: { w: 2,
+    cond: (p) => {
+      const f = pick(matesOf(p).filter((u) => relOf(p.id, u.id) >= 50)); if (!f) return null;
+      const t = pick(Object.values(G.units).filter((u) => u.alive && !u.missing && !u.fac && !u.iron && u.id !== p.id && !u.met && u.city !== p.city && (routeTo(p.city, u.city) || [0, 0, 0, 0]).length <= 3));
+      return t ? { a: f.id, b: t.id } : null;
+    },
+    make: (p, e) => ({ title: "인재 추천", who: e.a, text: `${U(e.a).name}: "${U(e.b).city}에 ${jo(U(e.b).name, "이가")} 있는데, 한번 만나 볼래? 내가 소개해 줄게."\n\n${STAT_LINE(U(e.b))}`, yes: "만나 본다", no: "다음에" }),
+    apply: (p, e, ok) => {
+      const t = U(e.b);
+      if (!ok) return `${jo(t.name, "와과")}의 만남을 미뤘다.`;
+      t.city = p.city; t.met = true; addRel(p.id, t.id, 10); addRel(e.a, t.id, 5);
+      return `${jo(t.name, "이가")} ${jo(p.city, "으로")} 찾아왔다. 친밀 +10${p.fac ? " — 지금 등용을 시도해 볼 수 있다" : ""}`;
+    } },
+  // 일기토 신청: 무용을 겨루자는 장수
+  duel: { w: 2,
+    cond: (p) => { const u = pick(matesOf(p).filter((u) => ["용맹", "대담"].includes(perOf(u).type) && u.st.war >= 70 && relOf(p.id, u.id) > -40)); return u && p.hp >= 40 ? { a: u.id } : null; },
+    make: (p, e) => ({ title: "일기토 신청", who: e.a, text: `${U(e.a).name}: "소문은 들었어. 네 실력, 직접 확인해 보고 싶은데?"\n\n(상대 무력 ${U(e.a).st.war} · 내 무력 ${p.st.war}) 이기면 무력 경험·명성, 지면 체력 -20.`, yes: "받아들인다", no: "사양한다", duel: true }),
+    apply: (p, e, ok, won) => {
+      const u = U(e.a);
+      if (!ok) { addRel(p.id, u.id, -2); return `${u.name}의 도전을 사양했다.`; }
+      if (won) { gainExp(p, "war", 40); addMerit(p, 30); addRel(p.id, u.id, 6); fameAdd("무관"); return `일기토 승리! 무력 경험 +40 · 명성 +30 · ${u.name} 친밀 +6`; }
+      p.hp = clamp(p.hp - 20, 0, 100); gainExp(p, "war", 15); addRel(p.id, u.id, 3);
+      return `일기토 패배… 체력 -20 · 무력 경험 +15 · ${u.name} 친밀 +3`;
+    } },
+  // 설전 신청: 논리를 겨루자는 장수
+  debate: { w: 2,
+    cond: (p) => { const u = pick(matesOf(p).filter((u) => ["냉정", "신중"].includes(perOf(u).type) && u.st.int >= 70 && relOf(p.id, u.id) > -40)); return u ? { a: u.id } : null; },
+    make: (p, e) => ({ title: "설전 신청", who: e.a, text: `${U(e.a).name}: "요즘 정세에 대해 네 생각을 듣고 싶어. 반론은 각오해 둬."\n\n(상대 지력 ${U(e.a).st.int} · 내 지력 ${p.st.int}) 이기면 지력 경험·위명.`, yes: "응한다", no: "사양한다", debate: true }),
+    apply: (p, e, ok, won) => {
+      const u = U(e.a);
+      if (!ok) { addRel(p.id, u.id, -2); return `${u.name}의 설전을 사양했다.`; }
+      if (won) { gainExp(p, "int", 40); addMerit(p, 30); addRel(p.id, u.id, 5); fameAdd("군사"); return `설전 승리! 지력 경험 +40 · 명성 +30 · ${u.name} 친밀 +5`; }
+      gainExp(p, "int", 15); addRel(p.id, u.id, 2);
+      return `설전 패배… 지력 경험 +15 · ${u.name} 친밀 +2`;
+    } },
+  // 이적 권유: 다른 세력이 나를 데려가려 한다
+  headhunt: { w: 1,
+    cond: (p) => {
+      if (!p.fac || isLord(p) || isGov(p) || p.merit < 600 || G.year < 2) return null;
+      const f = Object.values(G.factions).filter((f) => f.alive && !f.iron && f.key !== p.fac && citiesOf(f.key).length >= 2).sort((a, b) => relOf(p.id, b.lord) - relOf(p.id, a.lord))[0];
+      if (!f || relOf(p.id, f.lord) < -20) return null;
+      const dest = citiesOf(f.key).map((c) => ({ c: c.name, r: routeTo(p.city, c.name) })).filter((x) => x.r).sort((a, b) => a.r.length - b.r.length)[0];
+      return dest ? { a: f.lord, c: dest.c, k: f.key } : null;
+    },
+    make: (p, e) => ({ title: "이적 권유", who: e.a, text: `${F(e.k).name}의 밀사가 찾아왔다.\n${U(e.a).name}: "${F(p.fac).name}에서는 그대의 재능이 아깝다. 우리에게 오지 않겠나?"\n\n수락하면 ${F(e.k).name}의 장수로서 ${e.c}에 부임한다. (원래 군주와의 관계 -20)`, yes: "받아들인다", no: "의리를 지킨다" }),
+    apply: (p, e, ok) => {
+      const old = F(p.fac); const ol = U(old.lord);
+      if (!ok) { addRel(p.id, ol.id, 4); addMerit(p, 15); return `${F(e.k).name}의 권유를 거절했다. 공적 +15 · ${ol.name} 친밀 +4`; }
+      const f = F(e.k); if (!f || !f.alive || C(e.c).owner !== f.key) return "밀사가 돌아간 사이 사정이 바뀌어 이야기가 흐지부지되었다.";
+      const c = C(p.city); if (c.gov === p.id) { c.gov = null; assignGov(c); }
+      addRel(p.id, ol.id, -20); p.fac = f.key; p.city = e.c; p.loyal = 70; p.dudok = null; p.trip = null;
+      G.tasks = (G.tasks || []).filter((t) => !t.doers.includes(p.id) && t.issuer !== p.id); G.mission = null; offerMissions();
+      addRel(p.id, f.lord, 10); chron(`${old.name}에서 ${jo(f.name, "으로")} 이적`);
+      return `${jo(old.name, "을를")} 떠나 ${f.name}의 장수가 되었다. ${e.c}에 부임했다.`;
+    } },
+  // 독립 권유: 군주와 사이가 나쁜 태수에게 측근이 거병을 권한다
+  rebel: { w: 2,
+    cond: (p) => {
+      if (!isGov(p) || isLord(p) || p.merit < 1500 || relOf(p.id, F(p.fac).lord) >= 40) return null;
+      const u = pick(matesOf(p).filter((u) => u.fac === p.fac && relOf(p.id, u.id) >= 30 && !isLord(u))); return u ? { a: u.id } : null;
+    },
+    make: (p, e) => ({ title: "독립 권유", who: e.a, text: `${U(e.a).name}: "${U(F(p.fac).lord).name}은 당신을 알아주지 않아요. 이 성의 주인은 이미 당신이에요… 독립하세요. 저는 따르겠어요."\n\n수락하면 ${p.city}에서 독립한다 (행동력 40).`, yes: "독립한다", no: "아직은 때가 아니다" }),
+    apply: (p, e, ok) => {
+      const u = U(e.a); const lord = U(F(p.fac).lord);
+      if (!ok) { addRel(p.id, lord.id, 5); addMerit(p, 10); return `독립 권유를 물리쳤다. ${lord.name} 친밀 +5`; }
+      if (G.ap < COST.rise) G.ap = COST.rise;
+      addRel(p.id, u.id, 10); actIndependence();
+      return isLord(p) ? `${u.name}의 권유로 독립했다.` : "독립하지 못했다.";
+    } },
+  // 재해: 지금 있는 세력 거점에 역병·메뚜기·홍수가 닥친다 (구휼로 피해를 줄인다)
+  disaster: { w: 2,
+    cond: (p) => { const c = C(p.city); if (!c.owner || F(c.owner).iron) return null; return { c: c.name, k: pick(Object.keys(DISASTER)) }; },
+    make: (p, e) => {
+      const c = C(e.c); const D = DISASTER[e.k]; const cost = reliefCost(p, c); const own = cost === 300;
+      return { title: D.ko, who: c.gov, text: `${e.c}에 ${jo(D.ko, "이가")} 닥쳤다!\n${D.d}\n\n${own ? "거점" : "개인"} 자금 ${cost}으로 구휼하면 피해가 절반으로 줄고 치안 +5 · 명성 +40.`, yes: `구휼한다 (${cost})`, no: "어쩔 수 없다" };
+    },
+    apply: (p, e, ok) => {
+      const c = C(e.c); const D = DISASTER[e.k]; const cost = reliefCost(p, c); const own = cost === 300;
+      const pay = ok && (own ? c.gold >= cost : p.gold >= cost);
+      if (pay) { if (own) c.gold -= cost; else p.gold -= cost; }
+      const r = D.hit(c, pay ? 0.5 : 1);
+      if (pay) { c.order = clamp(c.order + 5, 0, 100); addMerit(p, 40); fameAdd(own ? "문관" : "협객"); if (c.gov && c.gov !== p.id) addRel(p.id, c.gov, 5); return `구휼했다 — 피해 절반: ${r} · 치안 +5 · 명성 +40`; }
+      return `${r}${ok ? " (자금이 모자라 구휼하지 못했다)" : ""}`;
+    } },
+  // 군주 전용: 신하의 청원
+  petition: { w: 2,
+    cond: (p) => { if (!isLord(p)) return null; const u = pick(officersOf(p.fac).filter((u) => u.id !== p.id && isGov(u))); const cap = C(capitalOf(p.fac)); return u && cap && cap.gold >= 300 ? { a: u.id, c: u.city } : null; },
+    make: (p, e) => ({ title: "신하의 청원", who: e.a, text: `${U(e.a).name}: "${e.c}의 ${pick(["농지 정비", "시장 재건", "방벽 보강"])}에 자금이 필요합니다. 300만 내려 주십시오."\n\n본거지 자금 300 → ${e.c} 개발 · 충성 +5. 거절하면 충성 -3.`, yes: "허락한다", no: "거절한다" }),
+    apply: (p, e, ok) => {
+      const u = U(e.a); const c = C(e.c); const cap = C(capitalOf(p.fac));
+      if (!ok || !cap || cap.gold < 300 || c.owner !== p.fac) { u.loyal = clamp(u.loyal - 3, 0, 100); return `${u.name}의 청원을 물리쳤다. 충성 -3`; }
+      cap.gold -= 300; const mx = cityMax(c); const k = pick(["agri", "comm", "def"]); const g = Math.round(60 + u.st.pol * 0.6); const b0 = c[k]; c[k] = Math.min(mx[k], c[k] + g);
+      u.loyal = clamp(u.loyal + 5, 0, 100); addRel(p.id, u.id, 3);
+      return `${e.c} ${{ agri: "농업", comm: "상업", def: "방어" }[k]} +${c[k] - b0} · ${u.name} 충성 +5`;
+    } },
+};
+// 매달 초 개인 이벤트 하나 (35%, 이야기 장면이 있는 달은 쉼), 12월에는 논공행상
+function officerEvents() {
+  const p = P(); if (!p.alive || G.over) return;
+  if (G.month === 12 && p.fac && !isLord(p)) yearAward(p);
+  // 이야기 장면·중요한 선택이 있는 달에는 쉰다
+  if (G.queue.some((x) => ["routeChoice", "facChoice", "surrender", "ending", "captured"].includes(x.type) || (x.type === "dialog" && x.bg && !x.cast && !x.bgUrl && !x.squad))) return;
+  if (!chance(35)) return;
+  const cands = [];
+  for (const [key, ev] of Object.entries(OEV)) { if ((G.flags["oev_" + key] || 0) > monthIdx()) continue; const ctx = ev.cond(p); if (ctx) cands.push({ key, ctx, w: ev.w }); }
+  if (!cands.length) return;
+  let r = Math.random() * cands.reduce((s, x) => s + x.w, 0); let sel = cands[0];
+  for (const x of cands) { r -= x.w; if (r <= 0) { sel = x; break; } }
+  G.flags["oev_" + sel.key] = monthIdx() + 4; // 같은 이벤트는 4개월 쉰다
+  const e = { type: "oev", key: sel.key, ...sel.ctx }; Object.assign(e, OEV[sel.key].make(p, e));
+  G.queue.push(e);
+}
+function oevApply(e, ok, won) {
+  const ev = OEV[e.key]; if (!ev) return "";
+  const r = ev.apply(P(), e, ok, won);
+  if (r) log(`${e.title} — ${r}`, ok ? "good" : "");
+  return r;
+}
+// 논공행상: 12월, 세력 내 공적 순위에 따라 군주가 상을 내린다
+function yearAward(p) {
+  const lord = U(F(p.fac).lord);
+  const os = officersOf(p.fac).filter((u) => !isLord(u)).sort((a, b) => b.merit - a.merit);
+  const rank = os.findIndex((u) => u.id === p.id) + 1;
+  const top = rank > 0 && rank <= Math.max(1, Math.ceil(os.length * 0.2));
+  const gold = top ? 300 : 120;
+  p.gold += gold; addRel(p.id, lord.id, top ? 5 : 2);
+  if (top && typeof randItem === "function" && chance(50)) gainItem(randItem([10, 50, 35, 5]), "논공행상");
+  notify("논공행상", `${G.year}년을 마무리하며 ${jo(lord.name, "이가")} 공을 따졌다.\n\n세력 내 공적 ${rank}위 / ${os.length}명${top ? " — 으뜸가는 공신으로 꼽혔다!" : ""}\n상금 ${gold} · ${lord.name} 친밀 +${top ? 5 : 2}`, lord.id, top ? "PresentGet" : "ActionApprove", top ? "rankup" : "coin");
+  log(`논공행상 — 공적 ${rank}위, 상금 ${gold}`, "good");
+}
