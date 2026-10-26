@@ -976,3 +976,58 @@ body:has(#field.on) .cutin { top: calc(var(--fhead, 72px) + 2px); height: 150px;
   .hbtns #btnEnd { position: fixed; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 40; margin: 0; padding: 12px 20px; font-size: 16px; border-radius: 14px; box-shadow: 0 6px 22px #000c, 0 0 0 1px #e2b75a66; }
   #side { padding-bottom: 84px; }
 }
+
+/* ── 관계도 (삼국지 13식) ── */
+.relMap { position: fixed; inset: 0; z-index: 60; background: radial-gradient(ellipse 70% 65% at 48% 50%, #7a1418 0%, #4a0b10 45%, #1c0407 100%); color: #f3e7cf; outline: none; animation: scrIn .3s ease; overflow: hidden; }
+.relMap::before { content: ""; position: absolute; inset: 0; background: repeating-radial-gradient(circle at 48% 50%, #ffffff05 0 2px, transparent 2px 46px); pointer-events: none; }
+.rmStage { position: absolute; inset: 0 0 64px 0; }
+.rmLines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rmLink path { stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 2px #000c); }
+.rmLink path.glow { opacity: .28; filter: blur(3px); }
+.rmLink.thin { opacity: .75; }
+.rmNodes { position: absolute; inset: 0; }
+.rmNode { position: absolute; transform: translate(-50%, -50%); padding: 0; border-radius: 50%; overflow: hidden; border: 3px solid var(--fc); background: radial-gradient(circle at 50% 35%, #3a2a2a, #120607); box-shadow: 0 0 0 2px #0009, 0 6px 16px #000a; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.rmNode img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; display: block; pointer-events: none; }
+.rmNode:hover { transform: translate(-50%, -50%) scale(1.08); z-index: 3; border-color: var(--fc); color: inherit; }
+.rmNode.center { border-width: 5px; border-color: #fff3; box-shadow: 0 0 0 4px #ff5a5a, 0 0 0 9px #ffffff22, 0 0 40px 8px #ff3b3b88; z-index: 2; }
+.rmNode.outer { border-width: 2px; filter: saturate(.85) brightness(.9); }
+.rmNode.sel { box-shadow: 0 0 0 3px #ffe066, 0 0 22px 4px #ffd34daa; z-index: 4; }
+.rmNode.me:not(.center)::after { content: "나"; position: absolute; right: 2px; top: 2px; font: 700 10px var(--sans); background: #ffd34d; color: #321; border-radius: 6px; padding: 0 4px; }
+.rmName { position: absolute; transform: translateX(-50%); text-align: center; pointer-events: none; white-space: nowrap; line-height: 1.15; text-shadow: 0 1px 3px #000, 0 0 6px #000; }
+.rmName b { display: block; font: 700 12.5px var(--serif); } .rmName small { display: block; font-size: 11px; color: #ffd98a; }
+.rmName.outer b { font-size: 11px; font-weight: 500; color: #e8d9bd; }
+.rmName.center small { font-size: 12.5px; }
+.rmLv { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--sans); background: #2a0d0d; border: 2px solid #c94a3c; color: #ffe2b0; box-shadow: 0 0 6px #000; pointer-events: none; }
+.rmLv.k4 { background: #4a3300; border-color: #ffd34d; color: #ffe680; } .rmLv.k0 { background: #121a3a; border-color: #6f8cff; color: #cfd8ff; } .rmLv.k1 { border-color: #8a8a8a; }
+.rmPanel { position: absolute; background: linear-gradient(#1f0b0bee, #120506f2); border: 1px solid #8a6a3a; box-shadow: 0 0 0 1px #000 inset, 0 8px 24px #000a; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; }
+.rmPanel h4 { margin: 8px 0 4px; color: #d9b36a; }
+.rmLegend { left: 12px; top: 12px; width: 220px; }
+.rmInfo { right: 12px; top: 12px; width: 280px; max-height: calc(100% - 92px); overflow: auto; }
+.rmHead { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; border-bottom: 1px solid #8a6a3a66; padding-bottom: 6px; margin-bottom: 6px; }
+.rmHead b { font: 800 15px var(--serif); color: #fff1d2; } .rmHead small { color: #c9b48d; flex-basis: 100%; }
+.rmMeta { color: #d8c7a6; margin-bottom: 6px; }
+.rmKeys > div { display: flex; align-items: center; gap: 8px; height: 18px; } .rmKeys svg { flex: none; }
+.rmStats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-bottom: 6px; }
+.rmStats span { display: grid; text-align: center; background: #00000055; border: 1px solid #5a3a2a; border-radius: 5px; padding: 2px 0; font: 700 14px var(--sans); color: #fff; }
+.rmStats i { font: 500 10.5px var(--sans); font-style: normal; color: #d9b36a; }
+.rmRow { display: flex; gap: 8px; align-items: center; padding: 3px 0; border-bottom: 1px dashed #ffffff12; }
+.rmRow > i { flex: none; width: 74px; font-style: normal; color: #d9b36a; font-size: 11.5px; }
+.rmBar2 { display: inline-flex; align-items: center; gap: 4px; flex: 1; } .rmBar2 em { height: 6px; border-radius: 3px; display: block; max-width: 60%; } .rmBar2 small { color: #e8d9bd; }
+.rmBtns { display: flex; gap: 6px; margin-top: 8px; }
+.rmBar { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 12px; background: linear-gradient(#0000, #0a0203ee 40%); }
+.rmTogs, .rmNav { display: flex; gap: 6px; flex-wrap: wrap; }
+.rmTog { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(#3a1414, #220a0a); border-color: #8a5a3a; font-size: 12.5px; }
+.rmTog i { width: 13px; height: 13px; border-radius: 3px; border: 1px solid #c9a86a; background: #0008; }
+.rmTog.on { background: linear-gradient(#c99a3a, #7a5a1a); color: #1a0f02; border-color: #f6dc94; font-weight: 700; } .rmTog.on i { background: #1a0f02; box-shadow: inset 0 0 0 2px #f6dc94; }
+.rmSearch { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); display: flex; gap: 6px; padding: 8px; background: #1a0707f2; border: 1px solid #8a6a3a; border-radius: 8px; z-index: 5; }
+@media (max-width: 1100px) { .rmLegend { width: 190px; } .rmInfo { width: 240px; } }
+@media (min-width: 1600px) { .rmLegend { width: 270px; font-size: 14px; } .rmInfo { width: 340px; font-size: 14px; } .rmHead b { font-size: 18px; } .rmStats span { font-size: 17px; } .rmRow > i { width: 90px; font-size: 13px; }
+  .rmName b { font-size: 15px; } .rmName small { font-size: 13px; } .rmName.outer b { font-size: 13px; } .rmLv { width: 30px; height: 30px; font-size: 14px; } .rmTog, .rmNav button { font-size: 14px; padding: 8px 14px; } .rmBar { height: 76px; } .rmStage { bottom: 76px; } }
+@media (max-width: 700px) {
+  .rmStage { inset: 0 0 46% 0; }
+  .rmLegend { display: none; }
+  .rmInfo { left: 8px; right: 8px; top: auto; bottom: 96px; width: auto; max-height: calc(46% - 104px); }
+  .rmBar { height: 92px; flex-direction: column; justify-content: center; gap: 6px; }
+  .rmTog { padding: 4px 8px; font-size: 11.5px; } .rmNav button { padding: 5px 9px; font-size: 12px; }
+  .rmName b { font-size: 11px; } .rmName small { font-size: 10px; }
+}

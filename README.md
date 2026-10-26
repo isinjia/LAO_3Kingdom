@@ -321,6 +321,7 @@ WebGL을 쓸 수 없는 환경에서는 야전을 그릴 수 없으므로 자동
 | `js/stage.js`, `js/sd.js`, `js/sd/` | SD 리그 무대 (sd.js와 리그 변환 방식은 `5_LAO_Defence` 파이프라인 재사용) |
 | `js/audio.js`, `js/audio_manifest.js` | 사운드 매니저 |
 | `js/ui.js`, `js/ui_battle.js` | 화면 |
+| `js/ui_relmap.js` | 관계도 (삼국지 13식) — 가운데 장수와 이어진 장수, 관계 단계별 선, 원작 인연, 호칭 |
 
 ## 에셋 빌드
 
