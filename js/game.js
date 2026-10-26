@@ -527,6 +527,7 @@ function actResign() {
 }
 
 function actMove(to) {
+  if (typeof actTravel === "function") return actTravel(to); // 장수제: 지도 어디든 길을 따라 이동
   const p = P();
   if (!neighbors(p.city).includes(to)) return;
   const dest = C(to);
@@ -627,6 +628,7 @@ function endMonth() {
   // 다음 달
   G.month++; if (G.month > 12) { G.month = 1; G.year++; }
   G.ap = AP_MAX;
+  if (typeof continueTrip === "function") continueTrip(); // 이어 가던 길
   const p = P(); p.hp = clamp(p.hp + 15, 0, 100);
   if (G.mission && G.year * 12 + G.month > G.mission.deadline) {
     log(`임무 「${MISSION_TYPES[G.mission.type].ko}」 기한을 넘겼다. 공적 -40`, "bad");

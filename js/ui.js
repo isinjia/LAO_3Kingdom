@@ -269,7 +269,7 @@ const UI = {
         h("div", { class: "cnums" }, h("div", null, h("i", null, "병력"), h("b", null, fmt(c.troops))), h("div", null, h("i", null, "자금"), h("b", null, fmt(c.gold))), h("div", null, h("i", null, "식량"), h("b", null, fmt(c.food)))),
         row("농업", c.agri, mx.agri), row("상업", c.comm, mx.comm), row("기술", c.tech, mx.tech), row("치안", c.order, 100), row("방어", c.def, mx.def),
         h("div", { class: "btns" },
-          adj && (!p.fac || c.owner === p.fac) ? h("button", { disabled: G.ap < COST.move, onclick: () => { close(); actMove(name); this.sel = name; this.after(); } }, `이동 (${COST.move})`) : null,
+          (() => { const mv = this.moveInfo(name); return mv ? h("button", { disabled: !!mv.reason, title: mv.reason || mv.title, onclick: () => { close(); this.doMove(name); } }, mv.label) : null; })(),
           adj && canCommand(p) && c.owner !== p.fac ? h("button", { class: "primary", onclick: () => { close(); this.sel = name; this.warSetup(false); } }, "출진") : null)),
       h("div", { class: "cvList" }, enemyHidden ? h("span", { class: "muted" }, "철충 지역 — 정보 없음") : here.map((u) => h("button", { class: "chip" + (u.fac ? "" : " free"), onclick: () => this.unitDetail(u.id) }, sdface(u, 40), h("span", null, u.name)))));
     document.body.append(el);
@@ -484,7 +484,7 @@ const UI = {
     t.innerHTML = ""; t.append(...[h("div", { class: "tipH" }, flag(f, true), h("b", null, c.name)), h("div", null, f ? f.name : "공백지"),
       h("div", null, `병력 ${fmt(c.troops)} · 방어 ${fmt(c.def)}`), gov ? h("div", null, `태수 ${gov.name}`) : null,
       G.truce[c.owner] ? h("div", { class: "good" }, `휴전 ${G.truce[c.owner]}개월`) : null,
-      c.name === p.city ? h("div", { class: "gold" }, "현재 위치") : adj ? h("div", { class: "gold" }, "인접 — 이동/출진 가능") : null, h("div", { class: "muted small" }, "더블클릭: 도시 보기")].filter(Boolean));
+      c.name === p.city ? h("div", { class: "gold" }, "현재 위치") : adj ? h("div", { class: "gold" }, "인접 — 이동/출진 가능") : (() => { const r = routeTo(p.city, c.name); return r ? h("div", { class: "muted small" }, `이동 ${r.length}구간 · 행동력 ${moveCost(r)}`) : null; })(), h("div", { class: "muted small" }, "더블클릭: 도시 보기")].filter(Boolean));
     const r = $("#mapWrap").getBoundingClientRect();
     t.style.display = "block";
     const x = e.clientX - r.left + 16, y = e.clientY - r.top + 12;
@@ -637,12 +637,13 @@ const UI = {
     const c = C(this.sel || P().city); const f = F(c.owner); const gov = U(c.gov); const p = P(); const mx = cityMax(c);
     const sec = h("section", { class: "card city", style: `--fc:${f ? f.color : "#77736a"}` });
     const adj = neighbors(p.city).includes(c.name);
-    const canMove = adj && (!p.fac || c.owner === p.fac);
+    const mv = this.moveInfo(c.name);
     sec.append(h("div", { class: "cityBanner", style: `background-image:url(assets/city/${CITY_BG[c.name]}.jpg)`, onclick: () => this.cityView(c.name) },
       h("div", { class: "cbShade" }), h("span", { class: "cbBtn" }, "도시 보기 ▶"),
       h("div", { class: "cbFaces" }, unitsIn(c.name).filter((u) => u.fac === c.owner).slice(0, 6).map((u) => sdface(u, 30)))));
     sec.append(h("div", { class: "cityHead" }, flag(f), h("div", null, h("h3", null, c.name, h("small", null, ["", "소", "중", "대"][c.size] + "거점")), h("div", { class: "muted" }, f ? f.name : "공백지", gov ? ` · 태수 ${gov.name}` : "", G.truce[c.owner] ? ` · 휴전 ${G.truce[c.owner]}개월` : "")),
-      adj ? h("button", { class: "cmd move", disabled: G.ap < COST.move || !canMove, title: canMove ? "" : "사관 중에는 소속 거점으로만 이동", onclick: () => { Sound.sfx("turn", 0.6); actMove(c.name); this.sel = c.name; this.after(); } }, icon("move", 22), h("span", null, "이동"), h("small", null, COST.move)) : null));
+      mv ? h("button", { class: "cmd move", disabled: !!mv.reason, title: mv.reason || mv.title, onclick: () => { Sound.sfx("turn", 0.6); this.doMove(c.name); } }, icon("move", 22), h("span", null, mv.path.length > 1 ? `이동 ${mv.path.length}구간` : "이동"), h("small", null, mv.cost)) : null),
+      p.trip ? h("div", { class: "tripLine" }, h("span", null, `${jo(p.trip.to, "으로")} 이동 중 · 남은 ${p.trip.path.length}구간 (다음 달 초에 이어 감)`), h("button", { class: "mini", onclick: () => { cancelTrip(); this.after(); } }, "멈추기")) : null);
     const vis = !f || !f.iron || c.name === p.city || adj;
     const row = (k, v, m) => h("div", { class: "statRow" }, h("label", null, k), m ? bar(v, m, "cb") : h("span"), h("b", null, fmt(v)));
     sec.append(h("div", { class: "cstats" },
@@ -673,7 +674,7 @@ const UI = {
       [".card.goal", "목표·도전·평정 임무가 여기에 모여요. 사관 중이면 매달 임무 하나를 고르세요."],
       [".cmds", "내정·군사·개인 명령. 아이콘 아래 숫자는 행동력 비용이에요. 결과는 화면 위 토스트로 보여요."],
       [".cityBanner", "거점 배너를 누르면 「도시 보기」 — 거리의 SD 장수들과 시설 단면도를 볼 수 있어요."],
-      ["#map", "지도: 거점을 누르면 정보, 두 번 누르면 도시 보기. 인접 거점이면 이동·출진할 수 있어요."],
+      ["#map", "지도: 거점을 누르면 정보, 두 번 누르면 도시 보기. 길이 이어진 거점이면 어디든 이동할 수 있고(멀면 여러 달), 인접한 적 거점에는 출진할 수 있어요."],
       ["#btnEnd", "행동력을 다 쓰면 「다음 달」. 정세 보고와 이벤트가 이어져요. 막히면 「?」 가이드!"],
     ];
     let i = 0;
@@ -942,7 +943,8 @@ const UI = {
         if (!mates.length) return null;
         const act = (x) => {
           if (isLord(p) && x.fac === p.fac && x.city !== p.city) return h("button", { class: "mini", disabled: G.ap < 10, title: "행동력 10 · 군주 전용 · 같은 부대원이 모이면 막사 대화", onclick: () => { m.remove(); actSummon(x.id); this.after(); } }, "소환 (10)");
-          if (neighbors(p.city).includes(x.city) && (!p.fac || C(x.city).owner === p.fac)) return h("button", { class: "mini", disabled: G.ap < COST.move, onclick: () => { m.remove(); actMove(x.city); this.sel = x.city; this.after(); } }, "찾아가기");
+          const mv = x.city !== p.city && this.moveInfo(x.city);
+          if (mv) return h("button", { class: "mini", disabled: !!mv.reason, title: mv.reason || mv.title, onclick: () => { m.remove(); this.doMove(x.city); } }, `찾아가기 (${mv.cost})`);
           return null;
         };
         return h("details", { class: "mateHint" }, h("summary", null, `같은 부대 · ${squadName(u)} (${mates.length}명)`), mates.map((x) => h("span", { class: x.city === u.city ? "here" : "" }, sdface(x, 22), `${x.name} @${x.city}`, act(x))));
@@ -981,6 +983,22 @@ const UI = {
         h("button", { onclick: () => m.remove() }, "취소")));
     };
     draw();
+  },
+
+  // 이동 버튼 정보: 지도 어디든 길을 따라 간다 (철충 거점은 지나갈 수 없다)
+  moveInfo(name) {
+    const p = P(); if (name === p.city) return null;
+    const path = routeTo(p.city, name); if (!path) return null;
+    const cost = moveCost(path); const now = Math.min(path.length, Math.max(0, Math.floor((G.ap - MOVE_START) / MOVE_HOP)));
+    const title = `${path.join(" → ")} · 행동력 ${cost}${now < path.length ? ` (이번 달 ${now}구간, 나머지는 다음 달에 이어 감)` : ""}`;
+    return { path, cost, title, reason: G.ap < MOVE_START + MOVE_HOP ? `행동력 부족 (출발에 ${MOVE_START + MOVE_HOP} 필요)` : null, label: `이동 (${path.length > 1 ? `${path.length}구간 · ` : ""}${cost})` };
+  },
+  async doMove(name) {
+    const p = P(); const c = C(p.city); const warn = [];
+    if (c.gov === p.id && !isLord(p)) warn.push(`${jo(c.name, "을를")} 떠나면 태수 자리를 내놓게 된다.`);
+    const t = playerTask(); if (t && t.city === p.city) warn.push(`맡은 임무 「${taskName(t)}」를 그만두게 된다.`);
+    if (warn.length && !(await this.confirm("이동", `${warn.join("\n")}\n\n그래도 ${name}${jo(name, "으로").slice(name.length)} 가겠는가?`, p))) return;
+    actMove(name); this.sel = P().city; this.after();
   },
 
   // ── 장수제: 임무·평정·인맥·위명 ─────────────
@@ -1166,7 +1184,7 @@ const UI = {
     const T = [
       ["기본 흐름", [["행동력", "매달 100. 명령마다 행동력을 쓰고, 다 쓰면 「다음 달 ▶」. 매달 자동 저장된다."], ["신분", "재야 → 사관 → 승진(종사·교위·편장군·장군·대장군) → 태수 임명 → 독립 또는 군주."], ["평정", "사관 중이면 매달 임무 3개 중 하나를 고른다. 2개월 안에 달성하면 큰 공적."], ["승리", "32개 거점을 모두 손에 넣으면 천하통일. 철충을 섬멸하고 20거점 이상을 확보해도 ‘패권 승리’."]]],
       ["내정·인물", [["내정", "농업(식량)·상업(자금)·기술·치안·방벽·징병. 특기가 있으면 효과 1.5배. 거점 자금 50 필요."], ["탐방", "재야 인재 발견, 자금·전술 데이터 입수. 재야 장수는 지도의 인물 목록에서 점선 테두리."], ["교류", "친밀도를 올린다. 50이면 개인 대화, 100이면 의자매(義) — 거병·독립 때 함께한다."], ["등용·사관", "대화로 확률 판정, 또는 설전에서 이기면 확정. 매력·친밀·명성이 성공률을 높인다."]]],
-      ["장수제", [["신분과 권한", "재야 → 일반 → 중신(편장군 이상) → 태수 → 도독 → 군주. 신분이 오를수록 쓸 수 있는 명령이 늘어난다. 「임무」 탭(4)의 「위명·권한」에서 권한표를 볼 수 있다."], ["임무", "상관이 임무를 내리고, 중신은 직접 제안할 수 있다. 태수 이상은 관할 장수에게 발령한다. 수행 장수의 능력치로 매일 진행되고(한 달 30일), 친우 이상인 협력자가 있으면 빨라진다."], ["평정", "분기마다 세력의 전략 목표(내정 강화·군비 확충·인재 확보·수비 강화·공략)를 정한다. 중신은 의견을 내고, 군주는 직접 결정한다. 목표는 장수들의 실제 행동을 바꾼다."], ["인간관계", "교류·선물·연회·함께 하는 임무·함께 싸운 전투로 가까워지고, 적장으로 맞서면 적대가 쌓인다. 친우·막역지우·의자매 단계가 있고, 장수끼리도 관계를 맺어 등용·이적·독립에 영향을 준다."], ["위명", "무관·문관·군사·장군·협객·상인 6계통. 실적이 쌓이면 상위 위명이 되고 새 명령이나 효과가 열린다. 협객(의협 활동)·상인(교역)은 재야에서도 걸을 수 있는 길이다."], ["세계", "장수마다 성격·야망·의리가 있다. 충성은 매달 군주와의 관계·대우에 따라 변하고, 충성이 낮으면 하야하거나 친구가 있는 세력으로 떠난다. 야망이 큰 태수는 독립하기도 한다."]]],
+      ["장수제", [["이동", "지도 어디든 길을 따라 갈 수 있다(철충 거점은 지나갈 수 없음). 출발 15 + 구간마다 행동력 15. 행동력이 모자라면 남은 길은 다음 달 초에 이어 간다. 다른 세력 거점에서는 방문·교류·탐방만 하고 내정은 할 수 없다. 태수가 거점을 떠나면 태수 자리를 내놓는다."], ["신분과 권한", "재야 → 일반 → 중신(편장군 이상) → 태수 → 도독 → 군주. 신분이 오를수록 쓸 수 있는 명령이 늘어난다. 「임무」 탭(4)의 「위명·권한」에서 권한표를 볼 수 있다."], ["임무", "상관이 임무를 내리고, 중신은 직접 제안할 수 있다. 태수 이상은 관할 장수에게 발령한다. 수행 장수의 능력치로 매일 진행되고(한 달 30일), 친우 이상인 협력자가 있으면 빨라진다."], ["평정", "분기마다 세력의 전략 목표(내정 강화·군비 확충·인재 확보·수비 강화·공략)를 정한다. 중신은 의견을 내고, 군주는 직접 결정한다. 목표는 장수들의 실제 행동을 바꾼다."], ["인간관계", "교류·선물·연회·함께 하는 임무·함께 싸운 전투로 가까워지고, 적장으로 맞서면 적대가 쌓인다. 친우·막역지우·의자매 단계가 있고, 장수끼리도 관계를 맺어 등용·이적·독립에 영향을 준다."], ["위명", "무관·문관·군사·장군·협객·상인 6계통. 실적이 쌓이면 상위 위명이 되고 새 명령이나 효과가 열린다. 협객(의협 활동)·상인(교역)은 재야에서도 걸을 수 있는 길이다."], ["세계", "장수마다 성격·야망·의리가 있다. 충성은 매달 군주와의 관계·대우에 따라 변하고, 충성이 낮으면 하야하거나 친구가 있는 세력으로 떠난다. 야망이 큰 태수는 독립하기도 한다."]]],
       ["전쟁", [["출진", "태수·군주는 인접 거점으로 출진. 일반 장수는 「출진 상신」으로 승인받으면 총대장이 된다."], ["병종 상성", "경장 ▶ 기동 ▶ 중장 ▶ 경장. 우위면 피해 +20%, 열세면 −15%."], ["역할", "공격기: 피해 +10% · 보호기: 받는 피해 −12% · 지원기: 방어 시 아군 전체 사기 회복, 책략 성공률 +10%."], ["부대 결속", "원작에서 같은 부대(스틸 라인, 둠 브링어 등)인 장수가 함께 출진하면 1명당 공격력 +7%."], ["승패", "공격측은 10턴 안에 수비군 전멸 또는 수비 총대장 격파. 총대장이 패주하면 그 군은 패배."]]],
       ["일기토·설전", [["일기토", "공격·강공·방어·필살. 강공은 방어에 간파당해 반격을 받는다. 방어로 기력을 모아 100이 되면 필살."], ["설전", "논리 ▶ 감정 ▶ 사실 ▶ 논리. 상성으로 이기면 큰 피해, 같은 종류면 숫자 비교. 6라운드 후 기세가 높은 쪽 승리."]]],
       ["단축키", [["메인 화면", "Space / N 다음 달 · 1 내정 · 2 군사 · 3 개인 · 4 임무 · F 세력 · U 장수 · G 외교 · V 내 위치 · C 연표 · M 메뉴 · H 또는 ? 가이드"], ["전투", "A 공격 · C 돌격 · P 책략 · D 방어 · S 일기토 (명령할 부대가 선택된 상태에서)"], ["대화·창", "Enter / Space 다음 대사 · Esc 대화 건너뛰기·창 닫기"]]],

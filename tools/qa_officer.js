@@ -64,6 +64,21 @@ for (let i = 0; i < 7; i++) { G.ap = 100; actChivalry(); } ok(riseNeed() === 250
 // 상인 경로
 p.gold = 1000; const g0 = p.gold; for (let i = 0; i < 5; i++) { G.ap = 100; actTrade(); }
 ok(fameTier(p, "상인") === 1 && p.gold !== g0, "교역 5회 → 위명 「상인」");
+// ── 7-2) 이동: 사관 중에도 다른 세력 거점으로, 멀면 여러 달에 걸쳐
+{
+  p.fac = "steel"; p.city = citiesOf("steel")[0].name; p.merit = 300; p.trip = null; G.tasks = [];
+  const far = Object.values(G.cities).filter((c) => c.owner && c.owner !== "steel" && !F(c.owner).iron).map((c) => ({ c, r: routeTo(p.city, c.name) })).filter((x) => x.r).sort((a, b) => b.r.length - a.r.length)[0];
+  ok(!!far && far.r.length >= 3, "먼 다른 세력 거점까지 길이 있다 (" + (far ? far.r.length : 0) + "구간)");
+  if (far) {
+    G.ap = 100; actMove(far.c.name);
+    ok(p.trip && p.trip.to === far.c.name && p.city !== citiesOf("steel")[0].name && G.ap < 30, "행동력만큼 가고 남은 길은 예약 (" + p.city + ", 남은 " + (p.trip ? p.trip.path.length : 0) + ")");
+    let n = 0; while (p.trip && n++ < 6) { G.ap = 0; continueTrip(); G.ap = 100; if (p.trip) { G.ap = AP_MAX; continueTrip(); } }
+    ok(!p.trip && p.city === far.c.name && p.fac === "steel", "여러 달에 걸쳐 다른 세력 거점에 도착 (사관 유지)");
+  }
+  const ironC = Object.values(G.cities).find((c) => c.owner === "iron");
+  ok(!ironC || routeTo(p.city, ironC.name) === null, "철충 거점으로는 갈 수 없다");
+  actResign();
+}
 // ── 8) 저장/불러오기에 새 상태가 남는다
 G.tasks.push({ id: 999, kind: "agri", fac: "steel", issuer: F("steel").lord, doers: [doers[0] ? doers[0].id : a.id], city: city.name, need: 120, prog: 33, start: 0, reward: 100, origin: "issue" });
 const snap = { rel: JSON.stringify(G.rel), fame: JSON.stringify(p.fame), strat: JSON.stringify(G.strat), per: JSON.stringify(a.per), follow: free.follow };

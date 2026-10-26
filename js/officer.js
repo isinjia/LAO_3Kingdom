@@ -695,3 +695,58 @@ function initOfficer() {
   const p = P(); p.fame ||= {}; p.fameT ||= {};
   for (const f of Object.values(G.factions)) if (f.alive && !f.iron && f.lord !== G.player && !G.strat[f.key]) aiStrat(f);
 }
+
+// ── 이동: 지도 어디든 길을 따라 간다 (멀면 여러 달에 걸쳐) ──
+// 한 구간마다 행동력 15, 출발할 때 15를 더 쓴다. 행동력이 모자라면 남은 길은 다음 달 초에 이어 간다 (p.trip)
+const MOVE_HOP = 15, MOVE_START = 15;
+// 길 찾기: 철충 거점은 지나갈 수 없다 (도착지도 불가)
+function routeTo(from, to) {
+  const ok = (n) => { const c = C(n); return c && !(c.owner && F(c.owner).iron); };
+  if (from === to || !ok(to)) return null;
+  const prev = { [from]: null }; const q = [from];
+  while (q.length) {
+    const cur = q.shift();
+    if (cur === to) break;
+    for (const n of neighbors(cur)) if (!(n in prev) && ok(n)) { prev[n] = cur; q.push(n); }
+  }
+  if (!(to in prev)) return null;
+  const path = []; for (let n = to; n !== from; n = prev[n]) path.unshift(n);
+  return path;
+}
+const moveCost = (path) => (path ? MOVE_START + path.length * MOVE_HOP : 0);
+function moveStep(next) {
+  const p = P(); const from = C(p.city); const dest = C(next);
+  if (from.gov === p.id && !isLord(p)) { G.flags.noGov = true; from.gov = null; assignGov(from); G.flags.noGov = false; }
+  if (from.gov === p.id && isLord(p)) { from.gov = null; assignGov(from); }
+  p.city = next;
+  if (p.fac && isLord(p) && dest.owner === p.fac) dest.gov = p.id;
+}
+// 갈 수 있는 만큼 간다. 반환: 이번에 지난 구간 수
+function walk(path, startCost) {
+  let n = 0;
+  while (path.length && G.ap >= MOVE_HOP + (n === 0 ? startCost : 0)) { G.ap -= MOVE_HOP + (n === 0 ? startCost : 0); moveStep(path.shift()); n++; }
+  return n;
+}
+function actTravel(to) {
+  const p = P();
+  const path = routeTo(p.city, to);
+  if (!path) return notify("이동 불가", C(to) && C(to).owner && F(C(to).owner).iron ? "철충의 거점으로는 갈 수 없다." : "그곳으로 가는 길이 없다. (철충 거점은 지나갈 수 없다)");
+  if (G.ap < MOVE_START + MOVE_HOP) return notify("행동력 부족", `출발하려면 행동력 ${MOVE_START + MOVE_HOP}이 필요하다. (남음 ${G.ap})`);
+  const t = playerTask();
+  if (t && t.city === p.city) { if (t.doers[0] === p.id) G.tasks.splice(G.tasks.indexOf(t), 1); else t.doers = t.doers.filter((x) => x !== p.id); log(`거점을 떠나 임무 「${taskName(t)}」를 그만두었다.`, "bad"); }
+  const total = path.length; const from = p.city;
+  const n = walk(path, MOVE_START);
+  p.trip = path.length ? { to, path } : null;
+  if (p.trip) { log(`${from}에서 ${jo(to, "으로")} 출발 — ${n}/${total}구간 지나 ${p.city}에 머문다. 남은 길은 다음 달에 이어 간다.`); G.toast = { text: `${to}까지 남은 ${path.length}구간 — 다음 달 계속`, kind: "" }; }
+  else { log(`${jo(to, "으로")} 이동했다.${total > 1 ? ` (${total}구간)` : ""}`); if (p.fac && C(to).owner && C(to).owner !== p.fac) log(`${jo(to, "은는")} 다른 세력의 거점이다. 방문·교류·탐방은 할 수 있지만 내정은 할 수 없다.`, "sys"); }
+}
+// 다음 달 초: 이어 가던 길을 계속 간다
+function continueTrip() {
+  const p = P(); if (!p.trip) return;
+  const path = p.trip.path.filter(Boolean);
+  if (!path.every((n) => !(C(n).owner && F(C(n).owner).iron))) { log(`${jo(p.trip.to, "으로")} 가는 길이 철충에 막혀 멈췄다. (${p.city})`, "bad"); p.trip = null; return; }
+  walk(path, 0);
+  if (path.length) { p.trip.path = path; log(`${jo(p.trip.to, "으로")} 가는 중 — ${p.city}, 남은 ${path.length}구간`); }
+  else { log(`${p.trip.to}에 도착했다.`, "good"); p.trip = null; }
+}
+function cancelTrip() { const p = P(); if (p.trip) { log(`${jo(p.trip.to, "으로")} 가던 길을 멈췄다. (${p.city})`); p.trip = null; } }
