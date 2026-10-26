@@ -3,7 +3,7 @@
 const fs = require("fs"), path = require("path");
 global.localStorage = { getItem() { return null; }, setItem() {} };
 const dir = path.join(__dirname, "..", "js");
-const src = ["lao_official", "data", "city_bg", "equip_data", "skills_data", "lines_data", "game", "equip", "events", "battle"].map((f) => fs.readFileSync(path.join(dir, f + ".js"), "utf8")).join("\n");
+const src = ["lao_official", "data", "city_bg", "equip_data", "skills_data", "lines_data", "game", "officer", "equip", "events", "battle"].map((f) => fs.readFileSync(path.join(dir, f + ".js"), "utf8")).join("\n");
 const N = +(process.argv[2] || 8), diff = +(process.argv[3] || 1);
 const run = new Function("who", "diff", src + `;
 newGame(who, { diff }); let warn = 0, rival = 0, battles = 0; const top = [];

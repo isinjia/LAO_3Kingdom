@@ -1,4 +1,4 @@
-// 회귀 묶음 (Windows·macOS·Linux 공통): 대사 · 이벤트 정의 · 이벤트 흐름(5판) · 화면 스모크(서버 필요)
+// 회귀 묶음 (Windows·macOS·Linux 공통): 대사 · 이벤트 정의 · 장수제 · 이벤트 흐름(5판) · 화면 스모크(서버 필요)
 // 사용: node tools/qa_all.js          화면 스모크 생략: node tools/qa_all.js --noshot
 // 캡처는 OS 임시 폴더에 쓰고 끝나면 지운다. 하나라도 실패하면 종료 코드 1
 const { spawnSync } = require("child_process");
@@ -11,6 +11,7 @@ const evals = (out) => out.split(/\r?\n/).filter((l) => l.startsWith("eval:")).m
 const steps = [
   ["qa_lines", ["tools/qa_lines.js"], (r) => /문제 없음/.test(r.out), (r) => r.out.trim().split(/\r?\n/).pop()],
   ["qa_events", ["tools/qa_events.js"], (r) => r.code === 0, (r) => r.out.trim().split(/\r?\n/).pop()],
+  ["장수제 (신분·관계·임무·평정·위명·자율 행동·저장)", ["tools/qa_officer.js"], (r) => r.code === 0 && /문제 없음/.test(r.out), (r) => r.out.trim().split(/\r?\n/).slice(-2).join(" / ")],
   ["mix (렌더링 믹스: 마스킹·명료도·클리핑)", null, (r) => r.code === 0, (r) => r.out.trim().split(/\r?\n/).pop(), null, ["python", ["tools/mix_check.py"]]],
   // 기본 구성은 수비 우위(성 방어도 550)라 같은 시나리오의 자동 전투 공격 승률이 3~4%다 — 12판으로는 승률을 가를 수 없으니 전투 시간과 상한만 본다
   ["야전 밸런스 (field_sim 12판)", ["tools/field_sim.js", "12"], (r) => { const m = r.out.match(/중앙값 (\d+)초.*공격 승률 (\d+)%/); return !!m && +m[1] >= 40 && +m[1] <= 130 && +m[2] <= 40; }, (r) => r.out.trim().split(String.fromCharCode(10)).pop()],

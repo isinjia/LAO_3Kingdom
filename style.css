@@ -847,3 +847,20 @@ body:has(#field.on) .cutin { top: calc(var(--fhead, 72px) + 2px); height: 150px;
 .formPic.wings i:nth-child(1) { left: 14px; top: 21px; } .formPic.wings i:nth-child(2) { left: 30px; top: 14px; } .formPic.wings i:nth-child(3) { left: 30px; top: 30px; } .formPic.wings i:nth-child(4) { left: 42px; top: 6px; } .formPic.wings i:nth-child(5) { left: 42px; top: 38px; } .formPic.wings i:nth-child(6) { left: 54px; top: 0px; } .formPic.wings i:nth-child(7) { left: 54px; top: 44px; } .formPic.wings i:nth-child(8) { left: 62px; top: 12px; } .formPic.wings i:nth-child(9) { left: 62px; top: 32px; }
 .formPic.ring i:nth-child(1) { left: 30px; top: 20px; } .formPic.ring i:nth-child(2) { left: 52px; top: 22px; } .formPic.ring i:nth-child(3) { left: 46px; top: 6px; } .formPic.ring i:nth-child(4) { left: 31px; top: 0px; } .formPic.ring i:nth-child(5) { left: 14px; top: 6px; } .formPic.ring i:nth-child(6) { left: 8px; top: 22px; } .formPic.ring i:nth-child(7) { left: 14px; top: 38px; } .formPic.ring i:nth-child(8) { left: 31px; top: 44px; } .formPic.ring i:nth-child(9) { left: 46px; top: 38px; }
 .formPic.arrow i:nth-child(1) { left: 20px; top: 21px; } .formPic.arrow i:nth-child(2) { left: 60px; top: 22px; } .formPic.arrow i:nth-child(3) { left: 48px; top: 15px; } .formPic.arrow i:nth-child(4) { left: 48px; top: 29px; } .formPic.arrow i:nth-child(5) { left: 36px; top: 8px; } .formPic.arrow i:nth-child(6) { left: 36px; top: 36px; } .formPic.arrow i:nth-child(7) { left: 36px; top: 22px; } .formPic.arrow i:nth-child(8) { left: 6px; top: 10px; } .formPic.arrow i:nth-child(9) { left: 6px; top: 34px; }
+
+/* 장수제 */
+.roleLine { display: inline-flex; align-items: center; gap: 6px; margin: 3px 0 1px; padding: 1px 8px 1px 2px; border-radius: 10px; background: #ffffff08; border: 1px solid #ffffff14; font-size: 12px; cursor: pointer; }
+.roleLine b { color: #111; background: var(--gold2); border-radius: 8px; padding: 0 7px; font-size: 11px; }
+.wrow.pick { width: 100%; text-align: left; background: #ffffff06; border: 1px solid #ffffff10; color: inherit; font: inherit; }
+.wrow.pick:hover { background: #2a2414; }
+.taskRow { padding: 8px 10px; margin: 6px 0; border-radius: 10px; background: #ffffff07; border: 1px solid #ffffff10; }
+.trHead { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.trHead .grow { display: grid; gap: 2px; min-width: 0; }
+.trEta { display: grid; text-align: right; font-size: 12px; } .trEta b { color: var(--gold2); font-variant-numeric: tabular-nums; }
+.trFoot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+.trFoot .mini { margin-left: 4px; }
+.perLine { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; margin: 6px 0 2px; }
+.perLine i { font-style: normal; color: var(--muted); font-size: 11px; margin-right: 4px; }
+.perLine .bad, .mateHint .bad { color: #ef8a80; }
+.helpRow.cur { background: #e2b75a14; border-radius: 8px; }
+.helpRow.locked { opacity: 0.55; }

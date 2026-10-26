@@ -46,7 +46,7 @@ function bar(v, max, cls = "") { return h("div", { class: "bar " + cls }, h("i",
 function statusOf(u) {
   if (!u.fac) return "재야";
   if (isLord(u)) return "군주";
-  if (isGov(u)) return "태수";
+  if (isGov(u)) return u.dudok === u.fac ? "도독" : "태수";
   return rankName(u);
 }
 // 화면에 쓸 글자에 해당하는 웹폰트 조각을 미리 받는다 (최대 2.5초 대기)
@@ -371,7 +371,7 @@ const UI = {
   renderHeader() {
     const p = P(); const f = F(p.fac);
     { const mw = $("#mapWrap"); if (mw) mw.dataset.season = ["", "winter", "winter", "spring", "spring", "spring", "summer", "summer", "summer", "autumn", "autumn", "autumn", "winter"][G.month]; }
-    $("#hdrDate").innerHTML = ""; $("#hdrDate").append(h("b", null, `${STORY.era} ${G.year}년`), h("span", null, `${G.month}월`), h("small", null, ["", "겨울", "겨울", "봄", "봄", "봄", "여름", "여름", "여름", "가을", "가을", "가을", "겨울"][G.month]));
+    $("#hdrDate").innerHTML = ""; $("#hdrDate").append(h("b", null, `${STORY.era} ${G.year}년`), h("span", null, `${G.month}월 ${typeof dayNow === "function" ? (dayNow() % 30) + 1 : 1}일`), h("small", null, ["", "겨울", "겨울", "봄", "봄", "봄", "여름", "여름", "여름", "가을", "가을", "가을", "겨울"][G.month]));
     $("#hdrFac").innerHTML = ""; $("#hdrFac").append(flag(f, true), h("span", null, f ? f.name : "재야"));
     const now = G.year * 12 + G.month;
     if (G.flags.feastUntil && G.flags.feastUntil >= now) $("#hdrFac").append(h("em", { class: "buffChip", title: "승전 축하연: 전투 사기 +10 (이번 달 포함)" }, `축하연 ${G.flags.feastUntil - now + 1}개월 남음`));
@@ -503,6 +503,7 @@ const UI = {
           h("div", { class: "nameRow" }, gradeBadge(p), h("h2", null, p.name), h("span", { class: "status" }, statusOf(p))),
           h("div", { class: "muted small" }, p.full !== p.name ? p.full : "", " ", typeTag(p)),
           h("div", { class: "muted" }, f ? f.name : "재야", " · ", p.city),
+          typeof roleOf === "function" ? h("button", { class: "roleLine", title: "위명 · 신분과 권한", onclick: () => this.fameModal() }, h("b", null, roleOf(p)), fameTitle(p) ? h("span", null, `위명 「${fameTitle(p).name}」`) : h("span", { class: "muted" }, "위명 없음")) : null,
           squadName(p) ? h("div", { class: "squadTag sm" }, h("img", { src: `assets/troop/${squadIcon(p)}.webp` }), squadName(p)) : null,
           h("div", { class: "kv" }, h("span", null, h("i", null, "공적"), fmt(p.merit)), h("span", null, h("i", null, "자금"), fmt(p.gold)), h("span", null, h("i", null, "체력"), p.hp)))),
       this.meFold ? h("div", { class: "statLine" }, STATS.map((k) => h("span", null, h("i", null, STAT_KO[k]), p.st[k]))) : h("div", { class: "radarRow sm" }, radar(p.st, 118, f ? f.color : "#e9c46a"), statRows(p.st, p.ex, p)),
@@ -597,7 +598,7 @@ const UI = {
 
   commands() {
     const p = P(); const c = C(p.city); const own = p.fac && c.owner === p.fac;
-    const tabs = [["dev", "내정"], ["mil", "군사"], ["self", "개인"]];
+    const tabs = [["dev", "내정"], ["mil", "군사"], ["self", "개인"], ["office", "임무"]];
     const sec = h("section", { class: "card cmds" });
     sec.append(h("div", { class: "tabs" }, tabs.map(([k, n]) => h("button", { class: "tab" + (this.tab === k ? " on" : ""), onclick: () => { Sound.sfx("click", 0.4); this.tab = k; this.render(); } }, n))));
     const grid = h("div", { class: "cmdGrid" });
@@ -612,6 +613,8 @@ const UI = {
       grid.append(this.cmd("외교", "talk", 30, () => this.diplomacy(), isLord(p) ? null : "군주만 외교를 할 수 있다"));
       grid.append(this.cmd("세력 일람", "list", 0, () => this.factionList()));
       grid.append(this.cmd("장수 일람", "recruit", 0, () => this.unitList()));
+    } else if (this.tab === "office") {
+      this.officerCmds(grid);
     } else {
       grid.append(this.cmd("탐방", "search", COST.search, () => actSearch()));
       grid.append(this.cmd("휴식", "rest", COST.rest, () => actRest()));
@@ -907,6 +910,13 @@ const UI = {
       if (u.city !== p.city) btns.push(h("button", { disabled: G.ap < 10, title: "행동력 10", onclick: () => { m.remove(); actSummon(u.id); this.after(); } }, "소환 (10)"));
       const uc = C(u.city);
       if (uc.owner === p.fac && uc.gov !== u.id) btns.push(h("button", { onclick: () => { m.remove(); actAppoint(u.city, u.id); this.after(); } }, `${u.city} 태수 임명`));
+      if (typeof actAppointDudok === "function" && isGov(u)) btns.push(h("button", { disabled: !u.dudok && (G.ap < 10 || dudoksOf(p.fac).length >= dudokCap(p.fac)), title: `거점 6곳마다 1명 (${dudoksOf(p.fac).length}/${dudokCap(p.fac)})`, onclick: () => { m.remove(); actAppointDudok(u.id); this.after(); } }, u.dudok ? "도독 해임" : "도독 임명 (10)"));
+    }
+    if (typeof roleLv === "function" && !u.iron) {
+      if (same && p.gold >= 100) btns.push(h("button", { disabled: G.ap < 15, onclick: () => { m.remove(); actGift(u.id); this.after(); } }, "선물 (15)"));
+      if (roleLv(p) >= 3 && u.fac === p.fac && !isLord(u) && jurisOf(p).includes(u.city)) btns.push(h("button", { disabled: G.ap < 10, title: `거점 자금 100 · 충성 ${u.loyal}`, onclick: () => { m.remove(); actReward(u.id); this.after(); } }, "포상 (10)"));
+      if (same && hasFame("무관")) btns.push(h("button", { disabled: G.ap < 20, onclick: () => { m.remove(); actTeach(u.id); this.after(); } }, "무예 지도 (20)"));
+      if (same && hasFame("협객") && !u.fac && u.follow !== p.id) btns.push(h("button", { disabled: G.ap < 20 || u.bond < 50, title: "친밀 50 필요", onclick: () => { m.remove(); actGather(u.id); this.after(); } }, "호걸 규합 (20)"));
     }
     if (!u.iron && Sound.hasVoice(u.id)) btns.unshift(h("button", { class: "mini voiceBtn", title: "원작 대사", onclick: (ev) => { const l = typeof LAO_LINES !== "undefined" && LAO_LINES[u.id] ? pick(LAO_LINES[u.id]) : null; if (l && l.v) { Sound.voice(u.id, l.v, ["Join"]); this.toast(`원작 대사 — ${u.name}: “${l.t}”`, "bond"); } else Sound.voice(u.id, pick(["Join", "Intro", "Leader", "SearchEnd", "MVP"]), ["Join"]); } }, "▶ 대사"));
     btns.push(h("button", { onclick: () => m.remove() }, "닫기"));
@@ -918,6 +928,11 @@ const UI = {
           squadName(u) ? h("div", { class: "squadTag sm" }, h("img", { src: `assets/troop/${squadIcon(u)}.webp` }), squadName(u)) : null,
           u.iron ? h("div", { class: "muted" }, "철충 지휘개체 — 등용 불가") : h("div", { class: "kv" }, h("span", null, h("i", null, "공적"), fmt(u.merit)), h("span", null, h("i", null, "친밀"), u.bond), u.fac && !isLord(u) ? h("span", null, h("i", null, "충성"), u.loyal) : null),
           h("div", { class: "skills" }, u.skills.map((s) => h("span", { class: "skill", title: SKILLS[s] }, s))))),
+      typeof perOf === "function" && !u.iron ? h("div", { class: "perLine" },
+        h("span", { title: PER_DESC[perOf(u).type] }, h("i", null, "성격"), perOf(u).type), h("span", null, h("i", null, "야망"), perOf(u).amb), h("span", null, h("i", null, "의리"), perOf(u).gi),
+        u.id !== p.id ? h("span", { class: relOf(p.id, u.id) < 0 ? "bad" : "" }, h("i", null, "나와"), `${stageWith(u.id)} (${relOf(p.id, u.id)})`) : h("span", null, h("i", null, "신분"), roleOf(u)),
+        u.dudok ? h("span", null, h("i", null, "직위"), "도독") : null, taskBusy(u.id) ? h("span", null, h("i", null, "임무"), taskName((G.tasks || []).find((t) => t.doers.includes(u.id)))) : null) : null,
+      typeof topRels === "function" && !u.iron ? (() => { const rs = topRels(u.id, 6).filter((r) => r.u.id !== p.id || u.id === p.id); return rs.length ? h("details", { class: "mateHint" }, h("summary", null, `인맥 (${rs.length})`), rs.map((r) => h("span", { class: r.v < 0 ? "bad" : "" }, sdface(r.u, 22), `${r.u.name} — ${r.s} (${r.v})`))) : null; })() : null,
       h("div", { class: "radarRow" }, radar(u.st, 140, f ? f.color : "#e9c46a"), statRows(u.st, null, u)),
       u.iron ? null : h("div", { class: "eqLine" }, h("span", { class: "muted small" }, "장비"), this.eqSlots(u)),
       typeof LAO_SKILL !== "undefined" && LAO_SKILL[u.id] ? h("div", { class: "skillLine" }, h("img", { src: `assets/skill/${LAO_SKILL[u.id].ic}.webp` }), h("div", null, h("b", null, `고유 전법 「${LAO_SKILL[u.id].n}」`, h("small", null, ` ${SKILL_KIND[LAO_SKILL[u.id].t]}`)), h("small", { class: "eff" }, `실효과 — ${skillSummary(LAO_SKILL[u.id])}`), h("small", { class: "muted orig", title: `원작 효과: ${LAO_SKILL[u.id].d}` }, "ⓘ 원작 효과 보기 (마우스를 올리세요)"))) : null,
@@ -968,6 +983,151 @@ const UI = {
     draw();
   },
 
+  // ── 장수제: 임무·평정·인맥·위명 ─────────────
+  officerCmds(grid) {
+    const p = P(); const c = C(p.city); const own = p.fac && c.owner === p.fac; const lv = roleLv(p);
+    const mine = (G.tasks || []).filter((t) => t.doers.includes(p.id) || t.issuer === p.id);
+    grid.append(this.cmd(`임무 현황${mine.length ? ` (${mine.length})` : ""}`, "list", 0, () => this.tasksModal()));
+    if (p.fac && !isLord(p) && !isGov(p)) grid.append(this.cmd("임무 제안", "propose", 20, () => this.taskModal("propose"), lv < 2 ? "중신(편장군 이상)만 제안할 수 있다" : !own ? "소속 거점이 아니다" : playerTask() ? "이미 맡은 임무가 있다" : null));
+    if (lv >= 3) grid.append(this.cmd("임무 발령", "propose", 10, () => this.taskModal("issue")));
+    if (p.fac) grid.append(this.cmd("평정", "plot", isLord(p) ? 10 : 15, () => this.stratModal(), lv < 2 ? "중신(편장군 이상)부터 평정에서 의견을 낼 수 있다" : isLord(p) ? (G.flags.stratQ === quarterKey() ? "이번 분기 목표는 이미 정했다" : null) : (G.flags.voiceQ === quarterKey() ? "이번 분기에는 이미 의견을 냈다" : null)));
+    if (p.fac) grid.append(this.cmd("연회", "talk", 30, () => actFeast(), lv < 2 ? "중신(편장군 이상)만 연회를 열 수 있다" : p.gold < 200 ? "개인 자금 200 필요" : null));
+    if (lv >= 3) grid.append(this.cmd("포상", "comm", 10, () => this.pickUnit("포상", "거점 자금 100으로 장수의 충성을 높인다.", officersOf(p.fac).filter((u) => u.id !== p.id && !isLord(u) && jurisOf(p).includes(u.city)).sort((a, b) => a.loyal - b.loyal), (u) => `충성 ${u.loyal} · ${u.city}`, (u) => actReward(u.id))));
+    if (lv >= 4) grid.append(this.cmd("이동 명령", "move", 10, () => this.orderMoveModal()));
+    if (isLord(p)) grid.append(this.cmd("도독 임명", "serve", 10, () => this.pickUnit("도독 임명", `거점 6곳마다 1명 (현재 ${dudoksOf(p.fac).length}/${dudokCap(p.fac)}) · 도독을 다시 고르면 해임`, officersOf(p.fac).filter((u) => isGov(u) && !isLord(u)), (u) => `${u.city} 태수 · ${rankName(u)}${u.dudok ? " · 도독" : ""}`, (u) => actAppointDudok(u.id)), dudokCap(p.fac) ? null : "거점이 4곳 이상이어야 도독을 둘 수 있다"));
+    const folk = unitsIn(p.city).filter((u) => u.id !== p.id && !u.iron);
+    grid.append(this.cmd("선물", "talk", 15, () => this.pickUnit("선물", "개인 자금 100을 보내 친밀을 높인다. 같은 세력이면 충성 +3.", folk, (u) => `${stageWith(u.id)} · 친밀 ${u.bond}`, (u) => actGift(u.id)), p.gold < 100 ? "개인 자금 100 필요" : !folk.length ? "이 거점에 다른 장수가 없다" : null));
+    grid.append(this.cmd("의협 활동", "order", 25, () => actChivalry()));
+    grid.append(this.cmd("교역", "comm", 25, () => actTrade(), p.gold < 100 ? "개인 자금 100 필요" : c.owner && F(c.owner).iron ? "철충 거점" : null));
+    if (hasFame("무관")) grid.append(this.cmd("무예 지도", "train", 20, () => this.pickUnit("무예 지도", "같은 거점 장수의 무력을 단련해 준다.", folk, (u) => `무력 ${u.st.war} · 친밀 ${u.bond}`, (u) => actTeach(u.id)), folk.length ? null : "이 거점에 다른 장수가 없다"));
+    if (hasFame("문관")) grid.append(this.cmd("민정 시찰", "agri", 25, () => actInspect(), own ? null : "소속 거점에서만"));
+    if (hasFame("군사")) { const ts = neighbors(p.city).filter((n) => C(n).owner && C(n).owner !== p.fac && !F(C(n).owner).iron); grid.append(this.cmd("유언비어", "plot", 30, () => this.pickCity("유언비어", "이웃 적 거점의 치안과 장수 충성을 떨어뜨린다.", ts, (n) => `${F(C(n).owner).name} · 성공률 ${rumorChance(p, C(n))}%`, (n) => actRumor(n)), ts.length ? null : "이웃에 적 거점이 없다")); }
+    if (hasFame("장군")) grid.append(this.cmd("격려", "rise", 20, () => actRally(), p.fac ? null : "사관해야 한다"));
+    if (hasFame("협객")) { const fr = folk.filter((u) => !u.fac && u.follow !== p.id); grid.append(this.cmd("호걸 규합", "recruit", 20, () => this.pickUnit("호걸 규합", "친밀 50 이상인 재야 장수를 거병·독립 동지로 삼는다.", fr, (u) => `친밀 ${u.bond}`, (u) => actGather(u.id)), fr.length ? null : "이 거점에 재야 장수가 없다")); }
+    if (hasFame("상인", 2)) grid.append(this.cmd("군자금 헌납", "comm", 15, () => actDonate(), !c.owner || F(c.owner).iron ? "세력 거점에서만" : p.gold < 100 ? "개인 자금 100 필요" : null));
+    grid.append(this.cmd("인맥", "recruit", 0, () => this.relModal()));
+    grid.append(this.cmd("위명·권한", "list", 0, () => this.fameModal()));
+  },
+
+  pickUnit(title, desc, list, info, onPick) {
+    const m = this.modal([h("h3", null, title), desc ? h("p", { class: "muted" }, desc) : null,
+      h("div", { class: "warList" }, list.length ? list.map((u) => h("button", { class: "wrow pick", onclick: () => { m.remove(); Sound.sfx("click", 0.5); onPick(u); this.after(); } }, h("span"), sdface(u, 36), h("span", null, u.name, " ", gradeBadge(u)), h("small", null, info(u)), h("b", null, "선택"))) : h("span", { class: "muted" }, "대상이 없다.")),
+      h("div", { class: "btns" }, h("button", { onclick: () => m.remove() }, "닫기"))], "list");
+  },
+  pickCity(title, desc, list, info, onPick) {
+    const m = this.modal([h("h3", null, title), desc ? h("p", { class: "muted" }, desc) : null,
+      h("div", { class: "tgtList" }, list.map((n) => h("button", { class: "tgt", onclick: () => { m.remove(); Sound.sfx("click", 0.5); onPick(n); this.after(); } }, flag(F(C(n).owner), true), h("span", null, n), h("small", null, info(n))))),
+      h("div", { class: "btns" }, h("button", { onclick: () => m.remove() }, "닫기"))], "list");
+  },
+
+  taskRow(t, m) {
+    const p = P(); const k = TASK_KIND[t.kind]; const main = U(t.doers[0]);
+    const acts = [];
+    if (t.doers.includes(p.id)) {
+      const cand = unitsIn(t.city).filter((u) => u.fac === p.fac && u.id !== p.id && !isLord(u) && !taskBusy(u.id));
+      if (t.doers.length < 4 && cand.length) acts.push(h("button", { class: "mini", disabled: G.ap < 10, onclick: () => { m.remove(); this.pickUnit("협력 요청", "행동력 10 · 친우 이상이면 협력 보너스 +10%", cand, (u) => `${stageWith(u.id)} · ${STAT_KO[k.stat]} ${u.st[k.stat]} · 수락 ${helpChance(p, u)}%`, (u) => actTaskHelp(t.id, u.id)); } }, "협력 요청 (10)"));
+      acts.push(h("button", { class: "mini", onclick: () => { m.remove(); this.confirm("임무 거부", t.origin === "order" ? `${U(t.issuer).name}의 명령을 거부하겠는가?\n공적 -20 · 관계 악화` : "임무를 그만두겠는가?", U(t.issuer)).then((ok) => { if (ok) { actTaskDecline(t.id); this.after(); } }); } }, t.origin === "order" ? "거부" : "그만두기"));
+    }
+    if (t.issuer === p.id) acts.push(h("button", { class: "mini", onclick: () => { actTaskCancel(t.id); m.remove(); this.after(); } }, "발령 취소"));
+    return h("div", { class: "taskRow" },
+      h("div", { class: "trHead" }, sdface(main, 34), h("div", { class: "grow" }, h("b", null, taskName(t), h("small", { class: "muted" }, ` @${t.city}`)),
+        h("small", { class: "muted" }, `발령 ${U(t.issuer) ? U(t.issuer).name : "-"} · 수행 ${t.doers.map((id) => U(id).name).join(", ")}${coopBonus(t) ? ` · 협력 +${Math.round(coopBonus(t) * 100)}%` : ""}`)),
+        h("div", { class: "trEta" }, h("small", null, "예상 완료"), h("b", null, dayStr(Math.max(t.eta, dayNow()))), h("small", { class: "muted" }, `공적 +${t.reward}`))),
+      bar(t.prog, t.need, "ms"), h("div", { class: "trFoot" }, h("small", { class: "muted" }, `진행 ${Math.min(100, Math.round(t.prog / t.need * 100))}% · 하루 ${taskRate(t).toFixed(1)} (${STAT_KO[k.stat]} 기준)`), acts));
+  },
+  tasksModal() {
+    const p = P();
+    const body = h("div");
+    const m = this.modal([h("h3", null, icon("list", 22), `임무 현황 — 오늘 ${todayStr()}`), body, h("div", { class: "btns" }, h("button", { onclick: () => m.remove() }, "닫기"))], "list");
+    const mine = (G.tasks || []).filter((t) => t.doers.includes(p.id) || t.issuer === p.id);
+    const fac = p.fac ? (G.tasks || []).filter((t) => t.fac === p.fac && !mine.includes(t)) : [];
+    body.append(h("p", { class: "muted small" }, "임무는 수행 장수의 능력치로 매일 진행된다 (한 달 30일, 행동력을 쓸수록 날이 지난다). 완료되면 공적·충성·도시 수치가 오른다."));
+    body.append(h("h4", null, `내 임무 (${mine.length})`), mine.length ? h("div", null, mine.map((t) => this.taskRow(t, m))) : h("p", { class: "muted" }, p.fac ? (isGov(p) || isLord(p) ? "「임무 발령」으로 관할 장수에게 일을 맡길 수 있다." : (roleLv(p) >= 2 ? "상관이 임무를 내리기를 기다리거나, 「임무 제안」으로 직접 맡을 수 있다." : "상관이 임무를 내리기를 기다리자. 중신(편장군 이상)이 되면 직접 제안할 수 있다.")) : "재야는 임무를 받지 않는다. 의협 활동·교역으로 이름을 알리자."));
+    if (fac.length) body.append(h("h4", null, `세력의 다른 임무 (${fac.length})`), h("div", null, fac.map((t) => this.taskRow(t, m))));
+  },
+  // mode: "propose" (중신 → 상관) | "issue" (태수 이상 → 관할 장수)
+  taskModal(mode) {
+    const p = P(); let kind = "agri", doer = null, aim = null; const helpers = new Set();
+    const body = h("div");
+    const m = this.modal([h("h3", null, icon("propose", 22), mode === "issue" ? "임무 발령" : "임무 제안"), body], "war");
+    const pool = mode === "issue" ? officersOf(p.fac).filter((u) => u.id !== p.id && !isLord(u) && jurisOf(p).includes(u.city) && !taskBusy(u.id)).sort((a, b) => (b.city === p.city) - (a.city === p.city) || b.merit - a.merit) : [];
+    doer = pool[0] || null;
+    const draw = () => {
+      body.innerHTML = "";
+      const k = TASK_KIND[kind]; const city = mode === "issue" ? (doer ? doer.city : p.city) : p.city; const c = C(city);
+      body.append(h("div", { class: "tgtList" }, Object.entries(TASK_KIND).map(([key, x]) => h("button", { class: "tgt" + (key === kind ? " on" : ""), onclick: () => { kind = key; aim = null; draw(); } }, icon(key === "search" ? "search" : key === "recruit" ? "recruit" : key, 18), h("span", null, x.ko), h("small", null, `${STAT_KO[x.stat]} · 자금 ${x.gold}`)))));
+      if (mode === "issue") {
+        body.append(h("h4", null, `수행 장수 (관할 ${jurisOf(p).join(", ")})`));
+        body.append(h("div", { class: "warList" }, pool.length ? pool.map((u) => h("label", { class: "wrow" + (doer === u ? " on" : "") }, h("input", { type: "radio", name: "doer", checked: doer === u, onchange: () => { doer = u; helpers.clear(); aim = null; draw(); } }), sdface(u, 36), h("span", null, u.name, " ", gradeBadge(u)), h("small", null, `${u.city} · ${STAT_KO[k.stat]} ${u.st[k.stat]} · 충성 ${u.loyal}${issueAccept(u) < 100 ? ` (수락 ${issueAccept(u)}%)` : ""}`), h("b", null, ""))) : h("span", { class: "muted" }, "임무가 없는 관할 장수가 없다.")));
+        const hp = doer ? unitsIn(doer.city).filter((u) => u.fac === p.fac && u.id !== doer.id && u.id !== p.id && !isLord(u) && !taskBusy(u.id)) : [];
+        if (hp.length) body.append(h("h4", null, "협력 장수 (최대 3 · 수행 장수와 친우 이상이면 +10%)"), h("div", { class: "warList" }, hp.map((u) => h("label", { class: "wrow" + (helpers.has(u.id) ? " on" : "") }, h("input", { type: "checkbox", checked: helpers.has(u.id), disabled: !helpers.has(u.id) && helpers.size >= 3, onchange: (e) => { e.target.checked ? helpers.add(u.id) : helpers.delete(u.id); draw(); } }), sdface(u, 30), h("span", null, u.name), h("small", null, `${relStage(relOf(doer.id, u.id), isOath(doer.id, u.id))} (${relOf(doer.id, u.id)})`), h("b", null, "")))));
+      }
+      if (k.aim) {
+        const free = unitsIn(city).filter((u) => !u.fac && !u.iron && u.id !== G.player);
+        aim = aim && free.includes(U(aim)) ? aim : (free[0] ? free[0].id : null);
+        body.append(h("h4", null, "교섭 상대 (같은 거점의 재야 장수)"), free.length ? h("div", { class: "tgtList" }, free.map((u) => h("button", { class: "tgt" + (aim === u.id ? " on" : ""), onclick: () => { aim = u.id; draw(); } }, sdface(u, 24), h("span", null, u.name)))) : h("p", { class: "muted" }, "이 거점에는 재야 장수가 없다."));
+      }
+      const doers = mode === "issue" ? (doer ? [doer.id, ...helpers] : []) : [p.id];
+      const est = doers.length ? { kind, doers, need: k.need, prog: 0, start: dayNow() } : null;
+      if (est) est.eta = taskEta(est);
+      const needGold = k.gold + (mode === "propose" ? 100 : 0);
+      const reason = !doers.length ? "수행 장수가 없다" : k.aim && !aim ? "교섭 상대가 없다" : c.gold < needGold ? `거점 자금 부족 (${needGold})` : null;
+      body.append(h("p", { class: "muted small" }, est ? `${city} · 하루 진행 ${taskRate(est).toFixed(1)} / 목표 ${k.need} → 예상 완료 ${dayStr(est.eta)}${coopBonus(est) ? ` · 협력 보너스 +${Math.round(coopBonus(est) * 100)}%` : ""}` : ""));
+      body.append(h("div", { class: "btns" },
+        h("button", { class: "primary", disabled: !!reason, title: reason || "", onclick: () => { m.remove(); if (mode === "issue") actTaskIssue(kind, doer.id, [...helpers], aim); else actTaskPropose(kind, aim); this.after(); } }, reason || (mode === "issue" ? "발령 (행동력 10)" : `제안 (행동력 20 · 승인 ${proposeTaskChance(p)}%)`)),
+        h("button", { onclick: () => m.remove() }, "취소")));
+    };
+    draw();
+  },
+  stratModal() {
+    const p = P(); const lord = isLord(p); let goal = "dev", target = null;
+    const tg = attackTargets(p.fac);
+    const body = h("div");
+    const m = this.modal([h("h3", null, icon("plot", 22), lord ? "평정 — 전략 목표 결정" : "평정 — 의견 제시"), body], "war");
+    const draw = () => {
+      body.innerHTML = "";
+      const cur = stratOf(p.fac);
+      body.append(h("p", { class: "muted" }, `현재 목표: 「${stratName(cur)}」${cur ? ` · ${Math.floor((cur.until - 1) / 12)}년 ${((cur.until - 1) % 12) + 1}월 말까지${cur.by && U(cur.by) ? ` · 제안 ${U(cur.by).name}` : ""}` : ""}`));
+      body.append(h("div", { class: "tgtList" }, Object.entries(STRAT).map(([k, s]) => h("button", { class: "tgt" + (k === goal ? " on" : ""), disabled: k === "attack" && !tg.length, onclick: () => { goal = k; target = k === "attack" ? target || tg[0] : null; draw(); } }, h("span", null, s.ko), h("small", null, s.d)))));
+      if (goal === "attack") body.append(h("h4", null, "공략 목표"), h("div", { class: "tgtList" }, tg.map((n) => h("button", { class: "tgt" + (n === target ? " on" : ""), onclick: () => { target = n; draw(); } }, flag(F(C(n).owner), true), h("span", null, n), h("small", null, `병력 ${fmt(C(n).troops)}`)))));
+      body.append(h("p", { class: "muted small" }, lord ? "정한 목표는 이번 분기(3개월) 동안 소속 장수들의 행동을 바꾼다. 분기 안에 이루면 공적 보상." : `받아들여지면 공적 +40 · 군주 친밀 +3, 분기 안에 이루면 추가 공적. 채택 가능성 약 ${voiceChance(p)}%`));
+      body.append(h("div", { class: "btns" },
+        h("button", { class: "primary", disabled: goal === "attack" && !target, onclick: () => { m.remove(); lord ? actStratSet(goal, target) : actStratVoice(goal, target); this.after(); } }, lord ? "결정 (행동력 10)" : "진언 (행동력 15)"),
+        h("button", { onclick: () => m.remove() }, "취소")));
+    };
+    draw();
+  },
+  orderMoveModal() {
+    const p = P(); const jz = jurisOf(p);
+    this.pickUnit("이동 명령", `관할 거점: ${jz.join(", ")}`, officersOf(p.fac).filter((u) => u.id !== p.id && !isLord(u) && jz.includes(u.city)), (u) => `${u.city} · ${statusOf(u)}`, (u) => {
+      this.pickCity(`${u.name} 이동`, "보낼 관할 거점을 고른다. (행동력 10)", jz.filter((n) => n !== u.city), (n) => `아군 장수 ${unitsIn(n).filter((x) => x.fac === p.fac).length}명`, (n) => actOrderMove(u.id, n));
+    });
+  },
+  relModal() {
+    const p = P();
+    const list = Object.values(G.units).filter((u) => u.alive && !u.iron && u.id !== p.id && (u.bond > 0 || u.feud > 0 || u.sworn)).sort((a, b) => relOf(p.id, b.id) - relOf(p.id, a.id));
+    const m = this.modal([h("h3", null, "인맥"),
+      h("p", { class: "muted small" }, "지인 30 · 친우 60 (등용 +8%) · 막역지우 85 (등용 +15%) · 의자매 100 (거병·독립 동행). 친우 이상끼리 함께 출진하면 공격 +3%. 적대 -40 · 원수 -70이면 등용이 어려워진다. 장수끼리도 같은 방식으로 관계를 맺고, 이적·독립 때 서로를 따라간다."),
+      h("div", { class: "tblWrap" }, h("table", { class: "tbl" }, h("tr", null, h("th"), h("th", null, "이름"), h("th", null, "단계"), h("th", null, "관계"), h("th", null, "소속"), h("th", null, "거점"), h("th", null, "성격")),
+        list.slice(0, 120).map((u) => h("tr", { onclick: () => { m.remove(); this.unitDetail(u.id); } }, h("td", null, sdface(u, 26)), h("td", null, u.name), h("td", { class: relOf(p.id, u.id) < 0 ? "bad" : "good" }, stageWith(u.id)), h("td", { class: "num" }, relOf(p.id, u.id)), h("td", null, F(u.fac) ? F(u.fac).name : "재야"), h("td", null, u.city), h("td", null, perOf(u).type))))),
+      list.length ? null : h("p", { class: "muted" }, "아직 가까운 장수가 없다. 교류·선물·연회·함께 하는 임무로 관계를 쌓자."),
+      h("div", { class: "btns" }, h("button", { onclick: () => m.remove() }, "닫기"))], "list wide");
+  },
+  fameModal() {
+    const p = P(); const r = roleOf(p);
+    const m = this.modal([h("h3", null, "위명 · 신분과 권한"),
+      h("h4", null, `현재 신분: ${r}${p.fac ? ` (관품 ${rankName(p)} · 공적 ${fmt(p.merit)})` : ""}`),
+      h("div", { class: "helpList" }, AUTH.map(([k, v]) => h("div", { class: "helpRow" + (k === r ? " cur" : ROLE_ORDER.indexOf(k) > ROLE_ORDER.indexOf(r) ? " locked" : "") }, h("b", null, k === r ? `▶ ${k}` : k), h("p", null, v)))),
+      h("h4", null, "위명 (6계통)"),
+      h("div", { class: "helpList" }, Object.entries(FAME).map(([line, d]) => {
+        const v = (p.fame || {})[line] || 0, t = fameTier(p, line); const next = d.tiers[t];
+        return h("div", { class: "helpRow" }, h("b", null, t ? d.tiers[t - 1][1] : line, h("small", { class: "muted" }, t ? ` ${line} ${t}단계` : " 미달성")),
+          h("div", null, h("p", null, `실적: ${d.how} ${v}회${next ? ` → 「${next[1]}」까지 ${next[0] - v}회` : " · 최고 단계"}`), next ? bar(v, next[0], "ms") : null,
+            h("small", { class: "muted" }, d.tiers.map(([n, nm], i) => `${i < t ? "✔" : "·"} ${nm}(${n}): ${d.unlock[i]}`).join("   "))));
+      })),
+      h("div", { class: "btns" }, h("button", { onclick: () => m.remove() }, "닫기"))], "list wide");
+  },
+
   factionList() {
     const p = P();
     const rows = Object.values(G.factions).filter((f) => f.alive).sort((a, b) => citiesOf(b.key).length - citiesOf(a.key).length).map((f) => {
@@ -1006,9 +1166,10 @@ const UI = {
     const T = [
       ["기본 흐름", [["행동력", "매달 100. 명령마다 행동력을 쓰고, 다 쓰면 「다음 달 ▶」. 매달 자동 저장된다."], ["신분", "재야 → 사관 → 승진(종사·교위·편장군·장군·대장군) → 태수 임명 → 독립 또는 군주."], ["평정", "사관 중이면 매달 임무 3개 중 하나를 고른다. 2개월 안에 달성하면 큰 공적."], ["승리", "32개 거점을 모두 손에 넣으면 천하통일. 철충을 섬멸하고 20거점 이상을 확보해도 ‘패권 승리’."]]],
       ["내정·인물", [["내정", "농업(식량)·상업(자금)·기술·치안·방벽·징병. 특기가 있으면 효과 1.5배. 거점 자금 50 필요."], ["탐방", "재야 인재 발견, 자금·전술 데이터 입수. 재야 장수는 지도의 인물 목록에서 점선 테두리."], ["교류", "친밀도를 올린다. 50이면 개인 대화, 100이면 의자매(義) — 거병·독립 때 함께한다."], ["등용·사관", "대화로 확률 판정, 또는 설전에서 이기면 확정. 매력·친밀·명성이 성공률을 높인다."]]],
+      ["장수제", [["신분과 권한", "재야 → 일반 → 중신(편장군 이상) → 태수 → 도독 → 군주. 신분이 오를수록 쓸 수 있는 명령이 늘어난다. 「임무」 탭(4)의 「위명·권한」에서 권한표를 볼 수 있다."], ["임무", "상관이 임무를 내리고, 중신은 직접 제안할 수 있다. 태수 이상은 관할 장수에게 발령한다. 수행 장수의 능력치로 매일 진행되고(한 달 30일), 친우 이상인 협력자가 있으면 빨라진다."], ["평정", "분기마다 세력의 전략 목표(내정 강화·군비 확충·인재 확보·수비 강화·공략)를 정한다. 중신은 의견을 내고, 군주는 직접 결정한다. 목표는 장수들의 실제 행동을 바꾼다."], ["인간관계", "교류·선물·연회·함께 하는 임무·함께 싸운 전투로 가까워지고, 적장으로 맞서면 적대가 쌓인다. 친우·막역지우·의자매 단계가 있고, 장수끼리도 관계를 맺어 등용·이적·독립에 영향을 준다."], ["위명", "무관·문관·군사·장군·협객·상인 6계통. 실적이 쌓이면 상위 위명이 되고 새 명령이나 효과가 열린다. 협객(의협 활동)·상인(교역)은 재야에서도 걸을 수 있는 길이다."], ["세계", "장수마다 성격·야망·의리가 있다. 충성은 매달 군주와의 관계·대우에 따라 변하고, 충성이 낮으면 하야하거나 친구가 있는 세력으로 떠난다. 야망이 큰 태수는 독립하기도 한다."]]],
       ["전쟁", [["출진", "태수·군주는 인접 거점으로 출진. 일반 장수는 「출진 상신」으로 승인받으면 총대장이 된다."], ["병종 상성", "경장 ▶ 기동 ▶ 중장 ▶ 경장. 우위면 피해 +20%, 열세면 −15%."], ["역할", "공격기: 피해 +10% · 보호기: 받는 피해 −12% · 지원기: 방어 시 아군 전체 사기 회복, 책략 성공률 +10%."], ["부대 결속", "원작에서 같은 부대(스틸 라인, 둠 브링어 등)인 장수가 함께 출진하면 1명당 공격력 +7%."], ["승패", "공격측은 10턴 안에 수비군 전멸 또는 수비 총대장 격파. 총대장이 패주하면 그 군은 패배."]]],
       ["일기토·설전", [["일기토", "공격·강공·방어·필살. 강공은 방어에 간파당해 반격을 받는다. 방어로 기력을 모아 100이 되면 필살."], ["설전", "논리 ▶ 감정 ▶ 사실 ▶ 논리. 상성으로 이기면 큰 피해, 같은 종류면 숫자 비교. 6라운드 후 기세가 높은 쪽 승리."]]],
-      ["단축키", [["메인 화면", "Space / N 다음 달 · 1 내정 · 2 군사 · 3 개인 · F 세력 · U 장수 · G 외교 · V 내 위치 · C 연표 · M 메뉴 · H 또는 ? 가이드"], ["전투", "A 공격 · C 돌격 · P 책략 · D 방어 · S 일기토 (명령할 부대가 선택된 상태에서)"], ["대화·창", "Enter / Space 다음 대사 · Esc 대화 건너뛰기·창 닫기"]]],
+      ["단축키", [["메인 화면", "Space / N 다음 달 · 1 내정 · 2 군사 · 3 개인 · 4 임무 · F 세력 · U 장수 · G 외교 · V 내 위치 · C 연표 · M 메뉴 · H 또는 ? 가이드"], ["전투", "A 공격 · C 돌격 · P 책략 · D 방어 · S 일기토 (명령할 부대가 선택된 상태에서)"], ["대화·창", "Enter / Space 다음 대사 · Esc 대화 건너뛰기·창 닫기"]]],
       ["외교·기타", [["외교", "군주는 자금 300으로 다른 세력에 휴전을 제안할 수 있다. 휴전 중 12개월은 서로 공격하지 않는다."], ["철충", "등용 불가. 매달 병력이 불어나며 이웃을 노린다. 대공세 등 이벤트가 있다."], ["소리", "상단 🔊로 음소거. 설정에서 배경음·효과음·보이스 볼륨과 전투 연출 속도 조절."]]],
     ];
     const body = h("div");
@@ -1194,7 +1355,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const K = { " ": "#btnEnd", n: "#btnEnd", f: "#btnFac", u: "#btnUnits", g: "#btnDiplo", h: "#btnHelp", "?": "#btnHelp", m: "#btnMenu", v: "#btnHere" };
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (K[k]) { const b = document.querySelector(K[k]); if (b && !b.disabled) { e.preventDefault(); b.click(); } return; }
-    if (["1", "2", "3"].includes(k)) { UI.tab = ["dev", "mil", "self"][+k - 1]; UI.render(); return; }
+    if (["1", "2", "3", "4"].includes(k)) { UI.tab = ["dev", "mil", "self", "office"][+k - 1]; UI.render(); return; }
     if (k === "c" && typeof UI.chronicle === "function") UI.chronicle();
   });
   const cast = ["BR_Leona", "3P_Labiata", "PECS_Empress", "3P_ConstantiaS2", "BR_Valkyrie", "ST_Tiamat", "DS_Azazel"];

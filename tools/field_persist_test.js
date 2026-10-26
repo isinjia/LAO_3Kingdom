@@ -3,7 +3,7 @@
 const fs = require("fs"), path = require("path");
 global.localStorage = { getItem() { return null; }, setItem() {} };
 const dir = path.join(__dirname, "..", "js");
-const src = ["lao_official", "data", "city_bg", "equip_data", "skills_data", "lines_data", "lines_peer", "game", "equip", "events", "battle", "field"].map((f) => fs.readFileSync(path.join(dir, f + ".js"), "utf8")).join("\n");
+const src = ["lao_official", "data", "city_bg", "equip_data", "skills_data", "lines_data", "lines_peer", "game", "officer", "equip", "events", "battle", "field"].map((f) => fs.readFileSync(path.join(dir, f + ".js"), "utf8")).join("\n");
 const out = new Function(src + `;
 var Sound = { voice() {}, sfx() {}, bgm() {}, charSfx() {}, stopBgm() {} };
 var UI = { banner() {}, cutin: () => Promise.resolve() };

@@ -6,7 +6,7 @@
 const fs = require("fs"), path = require("path");
 global.localStorage = { getItem() { return null; }, setItem() {} };
 const dir = path.join(__dirname, "..", "js");
-const src = ["lao_official", "data", "city_bg", "equip_data", "skills_data", "lines_data", "lines_peer", "game", "equip", "events", "battle", "field"].map((f) => fs.readFileSync(path.join(dir, f + ".js"), "utf8")).join("\n");
+const src = ["lao_official", "data", "city_bg", "equip_data", "skills_data", "lines_data", "lines_peer", "game", "officer", "equip", "events", "battle", "field"].map((f) => fs.readFileSync(path.join(dir, f + ".js"), "utf8")).join("\n");
 const N = +(process.argv[2] || 20); let seed = +(process.argv[3] || 7); const POLICY = process.argv[4] || "";
 Math.random = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }; // LCG (같은 인자 = 같은 결과)
 const run = new Function("seedIdx", "POLICY", src + `;

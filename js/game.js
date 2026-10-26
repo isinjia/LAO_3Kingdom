@@ -117,7 +117,7 @@ const citiesOf = (fac) => Object.values(G.cities).filter((c) => c.owner === fac)
 const neighbors = (city) => G.adj[city] || [];
 const rankOf = (u) => { let r = 0; RANKS.forEach((k, i) => { if (u.merit >= k.merit) r = i; }); return r; };
 const rankName = (u) => (u.fac ? RANKS[rankOf(u)].name : "재야");
-const maxTroops = (u) => (u.iron ? 9000 : RANKS[rankOf(u)].troops) + (isLord(u) ? 3000 : 0);
+const maxTroops = (u) => (u.iron ? 9000 : RANKS[rankOf(u)].troops) + (isLord(u) ? 3000 : 0) + (typeof fameTroops === "function" ? fameTroops(u) : 0);
 const isLord = (u) => !!u.fac && F(u.fac) && F(u.fac).lord === u.id;
 const isGov = (u) => !!u.fac && C(u.city) && C(u.city).owner === u.fac && C(u.city).gov === u.id;
 const portrait = (u) => (u ? (u.iron ? `assets/enemy/${u.id}.webp` : `assets/portrait/${u.id}.webp`) : "");
@@ -212,6 +212,7 @@ function newGame(playerId, opts = {}) {
   STORY.prologue.forEach((t) => log(t, "story"));
   if (p.fac) offerMissions();
   checkFacilityUps(true);
+  if (typeof initOfficer === "function") initOfficer();
   return G;
 }
 
@@ -287,6 +288,7 @@ function devGain(u, type) {
   let g = s * 0.5 + rnd(0, Math.round(s * 0.35)) + 5;
   if (hasSkill(u, DEV[type].skill)) g *= 1.5;
   const c = C(u.city); if (c && facLv(c, "tech") >= 3) g *= 1.1;
+  if (typeof fameDevMult === "function") g *= fameDevMult(u);
   return Math.round(g);
 }
 
@@ -351,6 +353,7 @@ function actDev(type) {
   addMerit(p, type === "draft" ? 25 + g / 100 : g * 0.6);
   gainExp(p, DEV[type].stat, rnd(8, 14));
   missionProgress(type, type === "draft" ? g : g);
+  if (typeof fameAdd === "function") fameAdd("문관");
   checkFacilityUps();
   checkGoals();
 }
@@ -420,6 +423,7 @@ function actTalk(id) {
 function recruitChance(p, t) {
   let v = 20 + t.bond * 0.5 + (p.st.cha - t.st.cha) * 0.4 + p.merit / 150;
   if (hasSkill(p, "인덕")) v += 12;
+  if (typeof relRecruitBonus === "function") v += relRecruitBonus(p, t);
   if (t.sworn) v = 100;
   return Math.round(clamp(v, 5, 100));
 }
@@ -437,6 +441,7 @@ function actRecruit(id, mode) {
     notify("등용 성공", `${t.name}: "${line}"\n\n${jo(t.full, "이가")} ${F(p.fac).name}에 합류했다.`, t.id, "Join", "gen");
     log(`${jo(t.name, "을를")} 등용했다.`, "good");
     missionProgress("recruit", 1); G.stats.recruits++;
+    if (mode === "debateWon" && typeof fameAdd === "function") fameAdd("군사");
     assignGov(C(p.city));
   } else {
     t.bond = clamp(t.bond + 3, 0, 100);
@@ -469,12 +474,12 @@ function actServe(mode) {
 
 function canRise() {
   const p = P(); const c = C(p.city);
-  return !p.fac && !c.owner && p.merit >= 400;
+  return !p.fac && !c.owner && p.merit >= (typeof riseNeed === "function" ? riseNeed() : 400);
 }
 
 function actRise() {
   const p = P(); const c = C(p.city);
-  if (!canRise()) return notify("거병 불가", "주인 없는 거점에서, 명성(공적) 400 이상일 때 거병할 수 있다.");
+  if (!canRise()) return notify("거병 불가", `주인 없는 거점에서, 명성(공적) ${typeof riseNeed === "function" ? riseNeed() : 400} 이상일 때 거병할 수 있다.`);
   if (!spend(COST.rise)) return;
   const key = "p_" + p.id;
   G.factions[key] = { key, name: `${p.name} 세력`, lord: p.id, flag: p.name[0], color: "#f1ece0", iron: false, desc: "폐허에서 일어선 신흥 세력.", alive: true, player: true };
@@ -483,7 +488,7 @@ function actRise() {
   const joined = [];
   for (const u of Object.values(G.units)) {
     if (!u.alive || u.iron || u.id === p.id || u.fac) continue;
-    if (u.sworn || (u.city === c.name && u.bond >= 60)) { u.fac = key; u.city = c.name; u.loyal = 90; joined.push(u.name); }
+    if (u.sworn || u.follow === p.id || (u.city === c.name && u.bond >= 60)) { u.fac = key; u.city = c.name; u.loyal = 90; u.follow = null; joined.push(u.name); }
   }
   notify("거병", `${jo(p.name, "은는")} ${c.name}에서 깃발을 올렸다!\n"사령관님이 돌아올 때까지 — 이곳은 내가 지킨다."` + (joined.length ? `\n\n함께한 동료: ${joined.join(", ")}` : ""), p.id, "Leader", "rankup2");
   log(`${c.name}에서 거병! ${F(key).name} 성립.`, "good");
@@ -503,8 +508,8 @@ function actIndependence() {
     if (u.sworn || u.bond >= 50) { u.fac = key; joined.push(u.name); }
     else { const back = capitalOf(old.key); if (back) u.city = back; }
   }
-  for (const u of Object.values(G.units)) if (u.sworn && u.alive && !u.fac && !u.iron) { u.fac = key; u.city = c.name; joined.push(u.name); }
-  p.fac = key; c.owner = key; c.gov = p.id;
+  for (const u of Object.values(G.units)) if ((u.sworn || u.follow === p.id) && u.alive && !u.fac && !u.iron) { u.fac = key; u.city = c.name; u.follow = null; joined.push(u.name); }
+  p.fac = key; c.owner = key; c.gov = p.id; p.dudok = null;
   notify("독립", `${jo(p.name, "은는")} ${jo(old.name, "와과")} 결별하고 ${c.name}에서 독립했다!` + (joined.length ? `\n따르는 자: ${joined.join(", ")}` : ""), p.id);
   log(`${old.name}에서 독립했다.`, "good");
   G.mission = null; G.missionOffer = null;
@@ -517,7 +522,7 @@ function actResign() {
   if (!p.fac || isLord(p)) return;
   const c = C(p.city); if (c.gov === p.id) c.gov = null;
   log(`${jo(F(p.fac).name, "을를")} 떠나 재야가 되었다.`, "bad");
-  p.fac = null; G.mission = null; G.missionOffer = null;
+  p.fac = null; p.dudok = null; G.mission = null; G.missionOffer = null;
   assignGov(c);
 }
 
@@ -610,11 +615,13 @@ function endMonth() {
   if (G.over) return;
   G.report = []; G.lastWars = [];
   for (const k of Object.keys(G.truce)) { if (--G.truce[k] <= 0) { delete G.truce[k]; log(`${jo(F(k) ? F(k).name : k, "와과")}의 휴전이 만료되었다.`, "war"); } }
+  if (typeof officerTick === "function") officerTick(); // 임무: 30일을 하루씩 진행
   aiDevelopment();
   aiFreeUnits();
   economy();
   aiWar();
   aiAbsorb();
+  if (typeof officerMonth === "function") officerMonth(); // 장수 자율 행동·관계·평정
   monthlyEvents();
   checkFactions();
   // 다음 달
@@ -645,6 +652,7 @@ function aiDevelopment() {
     const playerRuns = (G.player && P().fac === c.owner && (c.gov === G.player));
     for (const u of unitsIn(c.name)) {
       if (u.id === G.player || u.fac !== c.owner) continue;
+      if (typeof taskBusy === "function" && taskBusy(u.id)) continue; // 임무 수행 중
       if (playerRuns && !chance(50)) continue; // 플레이어가 태수인 거점은 위임 효율 절반
       if (c.gold < 300) break; // 플레이어 몫의 예비 자금은 남겨 둔다
       const mx = cityMax(c);
@@ -716,7 +724,8 @@ function armyPower(list, troops) {
   // list: [{u, troops}]
   const sb = squadBonus(list.map((x) => x.u));
   const mult = (u) => { const q = sb.find((b) => u.squad === b.key); return q ? q.mult : 1; };
-  return list.reduce((s, x) => s + x.troops * (0.5 + powerOf(x.u) / 100) * mult(x.u), 0) || (troops || 0) * 0.85;
+  const rm = typeof relArmyMult === "function" ? relArmyMult(list) : 1; // 친우끼리 함께 싸우면 강해진다
+  return list.reduce((s, x) => s + x.troops * (0.5 + powerOf(x.u) / 100) * mult(x.u), 0) * rm || (troops || 0) * 0.85;
 }
 
 function pickArmy(cityName, fac, troops, maxN, forceInclude) {
@@ -760,7 +769,7 @@ function aiWar() {
         const atkPow = c.troops * 0.65;
         // 무모함(지휘관 성향): 철충은 공격적, 공백지는 우선 목표
         const nerve = (f.iron ? 0.85 : 0.85 + Math.random() * 0.3) - Math.min(0.2, (G.year - 1) * 0.04) - (big ? Math.min(0.2, citiesOf(f.key).length * 0.015) : 0) - (top ? 0.15 : 0);
-        if (atkPow > defPow * nerve) cands.push({ from: c, to: t, score: atkPow / (defPow + 1) + (t.owner ? 0 : 0.8) + (G.year >= 6 && t.owner && !F(t.owner).iron && t.owner !== p.fac && citiesOf(t.owner).length >= 8 ? 0.6 : 0) + (c.name === p.city && p.fac === f.key ? 1.2 : 0) + (!f.iron && F(t.owner) && F(t.owner).iron ? 0.5 : 0) + Math.random() * 0.5 });
+        if (atkPow > defPow * nerve) cands.push({ from: c, to: t, score: atkPow / (defPow + 1) + (t.owner ? 0 : 0.8) + (G.year >= 6 && t.owner && !F(t.owner).iron && t.owner !== p.fac && citiesOf(t.owner).length >= 8 ? 0.6 : 0) + (c.name === p.city && p.fac === f.key ? 1.2 : 0) + (!f.iron && F(t.owner) && F(t.owner).iron ? 0.5 : 0) + (typeof stratBonus === "function" ? stratBonus(f.key, t.name) : 0) + Math.random() * 0.5 });
       }
     }
     if (!cands.length) continue;
@@ -895,6 +904,7 @@ function applyBattle(b, result) {
     log(`${af.name}의 ${b.to} 공략은 실패로 끝났다.`, "war");
     if (p.fac === b.defFac && p.city === b.to) addMerit(p, 150);
   }
+  if (typeof battleBonds === "function") battleBonds(b, result);
 }
 
 function handleCapture(u, captorFac, where) {
@@ -1096,7 +1106,7 @@ function checkPromotionEvents() {
   const c = C(p.city);
   if (c.owner !== p.fac || rankOf(p) < 2) return;
   const gov = U(c.gov);
-  if (!gov || (!isLord(gov) && gov.merit < p.merit && chance(35))) {
+  if (!gov || (!isLord(gov) && gov.merit < p.merit && chance(35 + U(F(p.fac).lord).bond / 4))) {
     c.gov = p.id;
     notify("태수 임명", `${U(F(p.fac).lord).name}: "${jo(c.name, "을를")} 그대에게 맡기겠다."\n${c.name}의 태수가 되었다! 이제 이 거점에서 출진을 지휘할 수 있다.`, F(p.fac).lord, "Leader", "rankup");
   }
@@ -1116,7 +1126,8 @@ function acceptSurrender(fk, ok) {
 // 목표: 신분에 따라 다음 목표와 보상
 function currentGoal() {
   const p = P();
-  if (!p.fac) return p.merit < 400 ? { text: "명성 400 달성 (거병 가능)", cur: p.merit, max: 400 } : { text: "세력에 사관하거나 공백지에서 거병", cur: 1, max: 1 };
+  const rn = typeof riseNeed === "function" ? riseNeed() : 400;
+  if (!p.fac) return p.merit < rn ? { text: `명성 ${rn} 달성 (거병 가능)`, cur: p.merit, max: rn } : { text: "세력에 사관하거나 공백지에서 거병", cur: 1, max: 1 };
   if (isLord(p)) {
     const n = citiesOf(p.fac).length; const ms = [8, 16, 24, 32].find((m) => n < m) || 32;
     return { text: ms === 32 ? "천하통일 (32거점)" : `거점 ${ms}곳 확보 — 보상: EX 장비`, cur: n, max: ms, key: "cities" + ms };
@@ -1172,5 +1183,5 @@ function checkVictory() {
 
 // ── 저장 ─────────────────────────────────
 function saveGame() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...G, queue: [] })); return true; } catch (e) { return false; } }
-function loadGame() { try { const s = localStorage.getItem(SAVE_KEY); if (!s) return false; G = JSON.parse(s); G.queue = []; G.inv ||= []; return true; } catch (e) { return false; } }
+function loadGame() { try { const s = localStorage.getItem(SAVE_KEY); if (!s) return false; G = JSON.parse(s); G.queue = []; G.inv ||= []; if (typeof initOfficer === "function") initOfficer(); return true; } catch (e) { return false; } }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
