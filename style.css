@@ -478,6 +478,27 @@ h4 { margin: 12px 0 6px; font-size: 12.5px; color: var(--muted); font-weight: 50
 .card.city .sideTabs { position: absolute; top: 8px; left: 10px; margin: 0; }
 .card.city { position: relative; }
 .logList.tall { max-height: 52vh; }
+/* 지도에서 거점을 누르면 그 옆에 뜨는 거점 정보 카드 */
+.card.cityPop { position: fixed; z-index: 60; width: 372px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  border-color: color-mix(in srgb, var(--fc) 55%, var(--line)); box-shadow: 0 14px 40px #000d, 0 0 0 1px #0008; animation: popIn .16s ease-out; }
+.card.cityPop.toR { border-left: 3px solid var(--gold2); } .card.cityPop.toL { border-right: 3px solid var(--gold2); }
+@keyframes popIn { from { opacity: 0; transform: scale(.96); } }
+.cityPop .cityBanner { border-radius: 11px 11px 0 0; }
+.cityPop .cbBtn { right: 42px; }
+.popX { position: absolute; top: 8px; right: 8px; z-index: 3; width: 28px; height: 24px; padding: 0; font-size: 13px; line-height: 1; border-radius: 8px; background: #000b; border: 1px solid #ffffff33; }
+.cityPop .chips { max-height: none; }
+.popLogHead { display: flex; align-items: center; gap: 8px; margin: 34px 0 8px; } .popLogHead b { font-family: var(--serif); font-size: 16px; }
+.cityPop .logList { max-height: 46vh; }
+/* 오른쪽 패널에 남긴 현재 거점 한 줄 요약 */
+.card.hereSum { display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; border-color: color-mix(in srgb, var(--fc) 40%, var(--line)); }
+.card.hereSum:hover { border-color: var(--gold); }
+.hsName { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; overflow: hidden; } .hsName b { font-family: var(--serif); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hsNums { flex-shrink: 0; } .hsName small { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hsNums { display: flex; gap: 10px; margin-left: auto; font-size: 13px; font-variant-numeric: tabular-nums; } .hsNums i { font-style: normal; color: var(--muted); font-size: 10.5px; margin-right: 3px; }
+.hsMore { font-size: 11.5px; color: var(--gold2); white-space: nowrap; }
+.logH { margin: 0 0 6px; font-size: 13px; color: var(--gold2); }
+@media (max-width: 700px) { .card.cityPop { width: 340px; padding: 10px 12px; } .cityPop .cityBanner { height: 76px; margin: -10px -12px 8px; } .cityPop .cbFaces { display: none; }
+  .cityPop .cnums { margin: 6px 0; } .cityPop .chip { width: 56px; } .cityPop .chip .sdf, .cityPop .chip img { max-width: 38px; max-height: 38px; } .hsNums { gap: 7px; font-size: 12px; } .hsMore { display: none; } }
 /* 전투 라벨 컴팩트 */
 .blabel { width: 118px; margin-left: -59px; margin-top: -46px; padding: 3px 5px 4px; font-size: 11px; }
 .blName b { font-size: 11.5px; }

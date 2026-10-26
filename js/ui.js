@@ -370,7 +370,7 @@ const UI = {
   // ── 메인 렌더 ───────────────────────
   render() {
     if (!G) return;
-    this.renderHeader(); this.renderMap(); this.renderSide();
+    this.renderHeader(); this.renderMap(); this.renderSide(); this.renderPop();
   },
 
   renderHeader() {
@@ -396,6 +396,8 @@ const UI = {
   renderMap() {
     const svg = $("#map"); svg.innerHTML = "";
     const p = P();
+    // 빈 곳을 누르면 거점 정보 카드를 닫는다
+    if (!svg.dataset.popClose) { svg.dataset.popClose = 1; svg.addEventListener("click", (e) => { if (!e.target.closest(".city") && this.popCity) this.closePop(); }); }
     svg.append(sv("defs", {}, ...[
       `<filter id="blur8"><feGaussianBlur stdDeviation="8"/></filter>`,
       `<filter id="ds" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity=".8"/></filter>`,
@@ -425,7 +427,8 @@ const UI = {
       const f = F(c.owner);
       const r = 12 + c.size * 3.5;
       const g = sv("g", { transform: `translate(${c.x},${c.y})`, class: "city" + (this.sel === c.name ? " sel" : "") + (c.name === p.city ? " here" : "") + (f && f.iron ? " iron" : "") });
-      g.addEventListener("click", () => { Sound.sfx("click", 0.5); this.sel = c.name; this.render(); });
+      g.dataset.city = c.name;
+      g.addEventListener("click", () => { Sound.sfx("click", 0.5); this.sel = c.name; this.popCity = c.name; this.popTab = "city"; this.tip(null); this.render(); });
       g.addEventListener("dblclick", () => this.cityView(c.name));
       g.addEventListener("mouseenter", (e) => this.tip(e, c));
       g.addEventListener("mousemove", (e) => this.tip(e, c));
@@ -489,7 +492,7 @@ const UI = {
 
   tip(e, c) {
     const t = $("#tip");
-    if (!e) { t.style.display = "none"; return; }
+    if (!e || c.name === this.popCity) { t.style.display = "none"; return; } // 카드가 떠 있는 거점은 말풍선을 겹쳐 띄우지 않는다
     const f = F(c.owner); const gov = U(c.gov); const p = P();
     const adj = neighbors(p.city).includes(c.name);
     t.innerHTML = ""; t.append(...[h("div", { class: "tipH" }, flag(f, true), h("b", null, c.name)), h("div", null, f ? f.name : "공백지"),
@@ -537,10 +540,13 @@ const UI = {
       goalCard.append(h("div", { class: "goalRow sub" }, h("b", { class: "mi" }, "임무"), h("span", null, `${MISSION_TYPES[m.type].ko} · ${Math.floor((m.deadline - 1) / 12)}년 ${((m.deadline - 1) % 12) + 1}월까지 · 공적 +${m.reward}`), h("em", null, `${fmt(Math.min(m.progress, m.target))}/${fmt(m.target)}`)), bar(m.progress, m.target, "ms"));
     }
     side.append(this.commands());
-    const st = this.sideTab || "city";
-    const tabs = h("div", { class: "tabs sideTabs" }, [["city", "거점 정보"], ["log", `기록 (${G.log.length})`]].map(([k, n]) => h("button", { class: "tab" + (st === k ? " on" : ""), onclick: () => { this.sideTab = k; this.render(); } }, n)));
-    if (st === "city") { const cp = this.cityPanel(); cp.prepend(tabs); side.append(cp); }
-    else side.append(h("section", { class: "card log" }, tabs,
+    // 거점 정보는 지도에서 거점을 누르면 옆에 뜨는 카드로 옮겼다. 여기에는 내정 명령이 쓰는 현재 거점의 병력·자금·식량만 한 줄로 남긴다.
+    const hc = C(p.city); const hf = F(hc.owner);
+    side.append(h("section", { class: "card hereSum", style: `--fc:${hf ? hf.color : "#77736a"}`, title: "누르면 지도에 이 거점의 정보 카드를 띄운다", onclick: () => { Sound.sfx("click", 0.4); this.sel = p.city; this.popCity = p.city; this.popTab = "city"; this.render(); } },
+      flag(hf), h("div", { class: "hsName" }, h("b", null, hc.name), h("small", null, hf ? hf.name : "공백지")),
+      h("div", { class: "hsNums" }, [["병력", hc.troops], ["자금", hc.gold], ["식량", hc.food]].map(([k, v]) => h("span", null, h("i", null, k), fmt(v)))),
+      h("span", { class: "hsMore" }, "정보 ▸")));
+    side.append(h("section", { class: "card log" }, h("h4", { class: "logH" }, `기록 (${G.log.length})`),
       h("div", { class: "logList tall" }, G.log.slice(0, 80).map((l) => h("div", { class: "ll " + l.kind }, h("i", null, l.d), l.text)))));
     side.scrollTop = sTop;
   },
@@ -645,17 +651,82 @@ const UI = {
     return sec;
   },
 
-  cityPanel() {
-    const c = C(this.sel || P().city); const f = F(c.owner); const gov = U(c.gov); const p = P(); const mx = cityMax(c);
+  // 지도에서 거점을 누르면 그 옆에 뜨는 거점 정보 카드
+  renderPop() {
+    const old = this.popEl; const sTop = old ? old.scrollTop : 0;
+    if (old) old.remove();
+    this.popEl = null;
+    if (!this.popCity || !C(this.popCity)) return;
+    const el = this.cityPanel(this.popCity);
+    el.classList.add("cityPop");
+    el.addEventListener("click", (e) => e.stopPropagation());
+    $("#main").append(el);
+    this.popEl = el; el.scrollTop = sTop;
+    if (!this.popFollow) { // 지도를 밀거나 창 크기·배율을 바꿔도 거점을 따라간다
+      this.popFollow = () => { if (this.popRaf) return; this.popRaf = requestAnimationFrame(() => { this.popRaf = 0; this.placePop(); }); };
+      window.addEventListener("scroll", this.popFollow, true); window.addEventListener("resize", this.popFollow);
+    }
+    if (window.ResizeObserver) { this.popRO ||= new ResizeObserver(this.popFollow); this.popRO.disconnect(); this.popRO.observe(el); } // 초상이 늦게 떠서 카드 높이가 바뀌어도 다시 맞춘다
+    this.placePop();
+  },
+
+  closePop() { this.popCity = null; if (this.popEl) { this.popEl.remove(); this.popEl = null; } this.renderMap(); },
+
+  placePop() {
+    const el = this.popEl; if (!el || !el.isConnected) return;
+    const g = [...document.querySelectorAll("#map .city")].find((x) => x.dataset.city === this.popCity);
+    const core = g && g.querySelector(".core"); const mw = $("#mapWrap");
+    if (!core || !mw) { el.style.visibility = "hidden"; return; }
+    const a = core.getBoundingClientRect(), m = mw.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth, vh = window.innerHeight, pad = 8, gap = 14;
+    const ax = (a.left + a.right) / 2, ay = (a.top + a.bottom) / 2;
+    // 거점이 지도 바깥으로 밀려 나가면 카드도 숨긴다
+    if (ax < m.left || ax > m.right || ay < m.top || ay > m.bottom || ay < 0 || ay > vh) { el.style.visibility = "hidden"; return; }
+    el.style.visibility = "";
+    const L = Math.max(pad, m.left + pad), R = Math.min(vw - pad, m.right - pad);
+    el.style.maxWidth = Math.max(240, R - L) + "px";
+    el.style.maxHeight = (vh - pad * 2) + "px";
+    const top0 = Math.max(pad, m.top + pad); const T = vh - pad - top0 >= el.offsetHeight ? top0 : pad, B = vh - pad;
+    el.style.maxHeight = (B - T) + "px";
+    const cw = el.offsetWidth; let ch = el.offsetHeight;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    let x, y;
+    if (a.right + gap + cw <= R) x = a.right + gap; // 오른쪽
+    else if (a.left - gap - cw >= L) x = a.left - gap - cw; // 걸리면 왼쪽
+    if (x != null) y = clamp(ay - Math.min(150, ch * 0.3), T, B - ch);
+    else { // 좌우 어디에도 안 들어가면(휴대폰 세로 화면) 위나 아래 — 더 넓은 쪽에 맞춰 높이를 줄이고 카드 안에서 밀어 보게 한다
+      x = clamp(ax - cw / 2, L, Math.max(L, R - cw));
+      const below = B - (a.bottom + gap), above = a.top - gap - pad;
+      const down = ch <= below || below >= above;
+      const room = Math.max(200, down ? below : above);
+      if (ch > room) { el.style.maxHeight = room + "px"; ch = el.offsetHeight; }
+      y = down ? clamp(a.bottom + gap, pad, B - ch) : clamp(a.top - gap - ch, pad, B - ch);
+    }
+    el.style.left = Math.round(x) + "px"; el.style.top = Math.round(y) + "px";
+    const side = x >= a.right ? "toR" : x + cw <= a.left ? "toL" : "";
+    el.classList.toggle("toR", side === "toR"); el.classList.toggle("toL", side === "toL");
+  },
+
+  cityPanel(name) {
+    const c = C(name || this.sel || P().city); const f = F(c.owner); const gov = U(c.gov); const p = P(); const mx = cityMax(c);
     const sec = h("section", { class: "card city", style: `--fc:${f ? f.color : "#77736a"}` });
+    const st = this.popTab || "city"; const clog = G.log.filter((l) => l.text.includes(c.name));
+    sec.append(h("div", { class: "tabs sideTabs" }, [["city", "거점 정보"], ["log", `기록 (${clog.length})`]].map(([k, n]) => h("button", { class: "tab" + (st === k ? " on" : ""), onclick: () => { Sound.sfx("click", 0.4); this.popTab = k; this.renderPop(); } }, n))),
+      h("button", { class: "popX", title: "닫기 (Esc)", onclick: () => this.closePop() }, "✕"));
     const adj = neighbors(p.city).includes(c.name);
     const mv = this.moveInfo(c.name);
+    if (st === "log") { // 이 거점이 나온 기록만 모아 본다
+      sec.append(h("div", { class: "popLogHead" }, flag(f), h("b", null, c.name), h("small", { class: "muted" }, "이 거점이 나온 기록")),
+        h("div", { class: "logList" }, clog.length ? clog.slice(0, 60).map((l) => h("div", { class: "ll " + l.kind }, h("i", null, l.d), l.text)) : h("div", { class: "muted small" }, "아직 기록이 없다.")));
+      return sec;
+    }
     sec.append(h("div", { class: "cityBanner", style: `background-image:url(assets/city/${CITY_BG[c.name]}.jpg)`, onclick: () => this.cityView(c.name) },
       h("div", { class: "cbShade" }), h("span", { class: "cbBtn" }, "도시 보기 ▶"),
       h("div", { class: "cbFaces" }, unitsIn(c.name).filter((u) => u.fac === c.owner).slice(0, 6).map((u) => sdface(u, 30)))));
     sec.append(h("div", { class: "cityHead" }, flag(f), h("div", null, h("h3", null, c.name, h("small", null, ["", "소", "중", "대"][c.size] + "거점")), h("div", { class: "muted" }, f ? f.name : "공백지", gov ? ` · 태수 ${gov.name}` : "", G.truce[c.owner] ? ` · 휴전 ${G.truce[c.owner]}개월` : "")),
-      mv ? h("button", { class: "cmd move", disabled: !!mv.reason, title: mv.reason || mv.title, onclick: () => { Sound.sfx("turn", 0.6); this.doMove(c.name); } }, icon("move", 22), h("span", null, mv.path.length > 1 ? `이동 ${mv.path.length}구간` : "이동"), h("small", null, mv.cost)) : null),
-      p.trip ? h("div", { class: "tripLine" }, h("span", null, `${jo(p.trip.to, "으로")} 이동 중 · 남은 ${p.trip.path.length}구간 (다음 달 초에 이어 감)`), h("button", { class: "mini", onclick: () => { cancelTrip(); this.after(); } }, "멈추기")) : null);
+      mv ? h("button", { class: "cmd move", disabled: !!mv.reason, title: mv.reason || mv.title, onclick: () => { Sound.sfx("turn", 0.6); this.doMove(c.name); } }, icon("move", 22), h("span", null, mv.path.length > 1 ? `이동 ${mv.path.length}구간` : "이동"), h("small", null, mv.cost)) : null));
+    /* 이동 중이 아닐 때 append(null)이 「null」 글자를 찍던 것을 막는다 */
+    if (p.trip) sec.append( h("div", { class: "tripLine" }, h("span", null, `${jo(p.trip.to, "으로")} 이동 중 · 남은 ${p.trip.path.length}구간 (다음 달 초에 이어 감)`), h("button", { class: "mini", onclick: () => { cancelTrip(); this.after(); } }, "멈추기")));
     const vis = !f || !f.iron || c.name === p.city || adj;
     const row = (k, v, m) => h("div", { class: "statRow" }, h("label", null, k), m ? bar(v, m, "cb") : h("span"), h("b", null, fmt(v)));
     sec.append(h("div", { class: "cstats" },
@@ -685,8 +756,8 @@ const UI = {
     const steps = [
       [".card.goal", "목표·도전·평정 임무가 여기에 모여요. 사관 중이면 매달 임무 하나를 고르세요."],
       [".cmds", "내정·군사·개인 명령. 아이콘 아래 숫자는 행동력 비용이에요. 결과는 화면 위 토스트로 보여요."],
-      [".cityBanner", "거점 배너를 누르면 「도시 보기」 — 거리의 SD 장수들과 시설 단면도를 볼 수 있어요."],
-      ["#map", "지도: 거점을 누르면 정보, 두 번 누르면 도시 보기. 길이 이어진 거점이면 어디든 이동할 수 있고(멀면 여러 달), 인접한 적 거점에는 출진할 수 있어요."],
+      [".hereSum", "지금 있는 거점의 병력·자금·식량. 누르면 지도에 거점 정보 카드가 떠요."],
+      ["#map", "지도: 거점을 누르면 바로 옆에 정보 카드(배너를 누르면 도시 보기, 빈 곳·Esc로 닫기), 두 번 누르면 도시 보기. 길이 이어진 거점이면 어디든 이동할 수 있고(멀면 여러 달), 인접한 적 거점에는 출진할 수 있어요."],
       ["#btnEnd", "행동력을 다 쓰면 「다음 달」. 정세 보고와 이벤트가 이어져요. 막히면 「?」 가이드!"],
     ];
     let i = 0;
@@ -1408,6 +1479,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.target.tagName === "INPUT") return;
     if (e.key === "Escape") {
       const m = [...document.querySelectorAll(".modalBg")].pop();
+      if (!m && UI.popCity && !document.querySelector(".vn, .tut, .cityView") && !(e.target.closest && e.target.closest(".cityView"))) { UI.closePop(); return; }
       if (m) { // 「닫기」 버튼이 있으면 그것을 누른다 (선택이 필요한 확인 창은 닫지 않음)
         const close = [...m.querySelectorAll("button")].find((b) => /^(닫기|확인)/.test(b.textContent.trim()));
         if (close) close.click(); else if (!m.querySelector(".msg")) m.remove();
