@@ -412,6 +412,7 @@ function actTalk(id) {
     const best = STATS.reduce((a, b) => (t.st[a] >= t.st[b] ? a : b));
     log(`${t.name}에게 ${STAT_KO[best]}에 관한 조언을 들었다.`); gainExp(p, best, 25);
   }
+  if (typeof talkScene === "function") talkScene(t); // 대화 장면 — 선택지에 따라 소소한 일이 벌어진다
   if (t.bond >= 100 && !t.sworn) {
     t.sworn = true;
     chron(`${jo(t.name, "와과")} 의자매의 연`);

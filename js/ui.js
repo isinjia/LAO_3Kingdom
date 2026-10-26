@@ -322,7 +322,9 @@ const UI = {
       if (st && e.cast) { const W = st.camera.right - st.camera.left; e.cast.forEach((id, k) => { if (!U(id) || !Stage.rigOf(id)) return; const side = k % 2 ? 1 : -1; const a = actors[id] = st.add(id, side * W * 0.27, yb, 5.4, -side, { z: 10 }); setTimeout(() => a.sd && a.sd.setTint(0.38, 0.38, 0.44), 50); }); }
       let i = 0, typing = null;
       const lines = e.lines;
-      const finish = () => { clearInterval(typing); el.classList.add("out"); Sound.stopAmb(); if ((ironScene || e.bgm) && G) this.mapBgm(); setTimeout(() => { if (st) st.destroy(); el.remove(); res(); }, 260); };
+      // 선택지(L.choices)가 남은 채 건너뛰면 마지막 선택지(무난한 쪽)로 정한다
+      const settle = () => { for (let k = i; k < lines.length; k++) { const C2 = lines[k].choices; if (!C2 || lines[k].picked) continue; lines[k].picked = true; const d = C2.find((c) => c.def) || C2[C2.length - 1]; lines.splice(k + 1, 0, ...((d.go && d.go()) || []).filter(Boolean)); } };
+      const finish = () => { if (finish.done) return; finish.done = true; settle(); clearInterval(typing); el.classList.add("out"); Sound.stopAmb(); if ((ironScene || e.bgm) && G) this.mapBgm(); setTimeout(() => { if (st) st.destroy(); el.remove(); res(); }, 260); };
       const show = () => {
         if (i >= lines.length) return finish();
         const L = lines[i];
@@ -351,18 +353,25 @@ const UI = {
         const txt = h("p", { class: "vnText" + (u ? "" : " narr") });
         content.append(h("div", { class: "vnBox", style: `--fc:${f ? f.color : "#c9b07a"}` },
           u ? h("div", { class: "vnName" }, useSd ? h("img", { class: "vnFace", src: portrait(u) }) : null, gradeBadge(u), h("b", null, u.full || u.name), f ? h("small", null, f.name) : null) : null,
-          txt, h("div", { class: "vnNext" }, `${i + 1} / ${lines.length}  ▼`)),
+          txt, L.choices ? h("div", { class: "vnChoices" }, L.choices.map((c, k) => h("button", { class: "vnChoice", onclick: (ev) => { ev.stopPropagation(); choose(k); } }, h("b", null, `${k + 1}`), h("span", null, c.t), c.sub ? h("small", null, c.sub) : null))) : h("div", { class: "vnNext" }, `${i + 1} / ${lines.length}  ▼`)),
           h("button", { class: "vnSkip", onclick: (ev) => { ev.stopPropagation(); finish(); } }, "건너뛰기 ▶▶"));
         if (u && L.voice) Sound.voice(u.id, L.voice, /^Idle_/.test(L.voice) ? [] : ["Join", "Intro", "Leader"]);
         let n = 0; clearInterval(typing);
         typing = setInterval(() => { n += 2; txt.textContent = L.text.slice(0, n); if (n >= L.text.length) { clearInterval(typing); typing = null; } }, 22);
         el.dataset.full = L.text;
       };
+      const choose = (k) => {
+        const L = lines[i]; if (!L || !L.choices || L.picked || !L.choices[k]) return;
+        L.picked = true; clearInterval(typing); typing = null;
+        lines.splice(i + 1, 0, ...((L.choices[k].go && L.choices[k].go()) || []).filter(Boolean));
+        Sound.sfx("click", 0.5); i++; show();
+      };
       el.addEventListener("click", () => {
         if (typing) { clearInterval(typing); typing = null; el.querySelector(".vnText").textContent = el.dataset.full; return; }
+        if (lines[i] && lines[i].choices) return; // 선택지를 고를 때까지 넘어가지 않는다
         Sound.sfx("click", 0.4); i++; show();
       });
-      el.tabIndex = 0; el.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") el.click(); if (ev.key === "Escape") finish(); });
+      el.tabIndex = 0; el.addEventListener("keydown", (ev) => { if (/^[1-4]$/.test(ev.key)) { if (typing) el.click(); choose(+ev.key - 1); return; } if (ev.key === "Enter" || ev.key === " ") el.click(); if (ev.key === "Escape") finish(); });
       show(); setTimeout(() => el.focus(), 30);
     });
   },
@@ -1241,7 +1250,7 @@ const UI = {
   help(tab = 0) {
     const T = [
       ["기본 흐름", [["행동력", "매달 100. 명령마다 행동력을 쓰고, 다 쓰면 「다음 달 ▶」. 매달 자동 저장된다."], ["신분", "재야 → 사관 → 승진(종사·교위·편장군·장군·대장군) → 태수 임명 → 독립 또는 군주."], ["평정", "사관 중이면 매달 임무 3개 중 하나를 고른다. 2개월 안에 달성하면 큰 공적."], ["승리", "32개 거점을 모두 손에 넣으면 천하통일. 철충을 섬멸하고 20거점 이상을 확보해도 ‘패권 승리’."]]],
-      ["내정·인물", [["내정", "농업(식량)·상업(자금)·기술·치안·방벽·징병. 특기가 있으면 효과 1.5배. 거점 자금 50 필요."], ["탐방", "재야 인재 발견, 자금·전술 데이터 입수. 재야 장수는 지도의 인물 목록에서 점선 테두리."], ["교류", "친밀도를 올린다. 50이면 개인 대화, 100이면 의자매(義) — 거병·독립 때 함께한다."], ["등용·사관", "대화로 확률 판정, 또는 설전에서 이기면 확정. 매력·친밀·명성이 성공률을 높인다."]]],
+      ["내정·인물", [["내정", "농업(식량)·상업(자금)·기술·치안·방벽·징병. 특기가 있으면 효과 1.5배. 거점 자금 50 필요."], ["탐방", "재야 인재 발견, 자금·전술 데이터 입수. 재야 장수는 지도의 인물 목록에서 점선 테두리."], ["교류", "친밀도를 올린다. 교류할 때마다 짧은 대화가 열리고, 고민 상담·대련·바둑·요리 시식·산책·부탁·내기·다툼 중재 같은 일이 생기기도 한다. 고르는 대답에 따라 친밀·능력 경험·자금이 달라지며, 상대의 성격에 맞는 대답일수록 더 가까워진다. 50이면 개인 대화, 100이면 의자매(義) — 거병·독립 때 함께한다."], ["등용·사관", "대화로 확률 판정, 또는 설전에서 이기면 확정. 매력·친밀·명성이 성공률을 높인다."]]],
       ["장수제", [["이동", "지도 어디든 길을 따라 갈 수 있다(철충 거점은 지나갈 수 없음). 출발 15 + 구간마다 행동력 15. 행동력이 모자라면 남은 길은 다음 달 초에 이어 간다. 다른 세력 거점에서는 방문·교류·탐방만 하고 내정은 할 수 없다. 태수가 거점을 떠나면 태수 자리를 내놓는다."], ["신분과 권한", "재야 → 일반 → 중신(편장군 이상) → 태수 → 도독 → 군주. 신분이 오를수록 쓸 수 있는 명령이 늘어난다. 「임무」 탭(4)의 「위명·권한」에서 권한표를 볼 수 있다."], ["임무", "상관이 임무를 내리고, 중신은 직접 제안할 수 있다. 태수 이상은 관할 장수에게 발령한다. 수행 장수의 능력치로 매일 진행되고(한 달 30일), 친우 이상인 협력자가 있으면 빨라진다."], ["평정", "분기마다 세력의 전략 목표(내정 강화·군비 확충·인재 확보·수비 강화·공략)를 정한다. 중신은 의견을 내고, 군주는 직접 결정한다. 목표는 장수들의 실제 행동을 바꾼다."], ["인간관계", "교류·선물·연회·함께 하는 임무·함께 싸운 전투로 가까워지고, 적장으로 맞서면 적대가 쌓인다. 친우·막역지우·의자매 단계가 있고, 장수끼리도 관계를 맺어 등용·이적·독립에 영향을 준다."], ["위명", "무관·문관·군사·장군·협객·상인 6계통. 실적이 쌓이면 상위 위명이 되고 새 명령이나 효과가 열린다. 협객(의협 활동)·상인(교역)은 재야에서도 걸을 수 있는 길이다."], ["질병·사망·후계", "장수는 병에 걸리기도 하고, 앓는 동안 세상을 떠날 수 있다. 같은 거점이면 병문안(행동력 15)으로 위험을 줄인다. 군주가 죽으면 공적·관계로 후계자가 정해지고(내가 될 수도 있다), 새 군주를 따르지 않는 장수는 떠나거나 독립한다. 나는 죽지 않지만 병에 걸리면 행동력이 줄고, 휴식하면 빨리 낫는다."], ["수행·평정 설전·외교", "「수행」은 이번 달 남은 행동력을 모두 써서 무예·학문을 닦고 특기를 익힌다. 평정에서 의견을 내면 다른 중신이 반론하기도 하는데, 설전으로 이기면 의견이 채택된다. 「친선 사절」 임무가 성공하면 그 세력과 12개월 휴전한다."], ["개인 이벤트", "매달 초 연회 초대·부탁·인재 추천·일기토 신청·설전 신청·이적 권유·독립 권유·재해·신하의 청원·도적 출몰·떠돌이 상인·병상의 소식 중 하나가 찾아오기도 한다. 내 세력에서 반란이 일어나면 진압 여부를 고른다. 수락하느냐에 따라 관계·공적·소속이 달라진다. 12월에는 논공행상으로 한 해의 공을 따진다."], ["세계", "장수마다 성격·야망·의리가 있다. 충성은 매달 군주와의 관계·대우에 따라 변하고, 충성이 낮으면 하야하거나 친구가 있는 세력으로 떠난다. 야망이 큰 태수는 독립하기도 한다."]]],
       ["전쟁", [["출진", "태수·군주는 인접 거점으로 출진. 일반 장수는 「출진 상신」으로 승인받으면 총대장이 된다."], ["병종 상성", "경장 ▶ 기동 ▶ 중장 ▶ 경장. 우위면 피해 +20%, 열세면 −15%."], ["역할", "공격기: 피해 +10% · 보호기: 받는 피해 −12% · 지원기: 방어 시 아군 전체 사기 회복, 책략 성공률 +10%."], ["부대 결속", "원작에서 같은 부대(스틸 라인, 둠 브링어 등)인 장수가 함께 출진하면 1명당 공격력 +7%."], ["승패", "공격측은 10턴 안에 수비군 전멸 또는 수비 총대장 격파. 총대장이 패주하면 그 군은 패배."]]],
       ["일기토·설전", [["일기토", "공격·강공·방어·필살. 강공은 방어에 간파당해 반격을 받는다. 방어로 기력을 모아 100이 되면 필살."], ["설전", "논리 ▶ 감정 ▶ 사실 ▶ 논리. 상성으로 이기면 큰 피해, 같은 종류면 숫자 비교. 6라운드 후 기세가 높은 쪽 승리."]]],
