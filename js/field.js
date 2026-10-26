@@ -259,7 +259,9 @@ const Field = {
     }
   },
   depth(y) { return 1 - ((y - FLD.Y0) / (FLD.Y1 - FLD.Y0)) * 0.22; },
-  formOffset(shape, k, n, dir) {
+  // 진형 자리: 모양별 자리(formShape)를 가로 1.5배·세로 1.25배로 벌린다 — 맞붙은 뒤에도 진형마다 모양이 확실히 다르게 보이게
+  formOffset(shape, k, n, dir) { const o = this.formShape(shape, k, n, dir); return { x: o.x * 1.5, y: o.y * 1.25 }; },
+  formShape(shape, k, n, dir) {
     // 줄 수는 병사 수에 따라 (3~6줄) — 큰 부대가 길게 늘어지지 않고 덩어리로 선다
     const rows = n > 24 ? 6 : n > 12 ? 4 : 3, row = k % rows, col = Math.floor(k / rows), r = row - (rows - 1) / 2;
     if (shape === "wedge") return { x: dir * (0.9 - col * 0.4), y: r * (0.26 + col * 0.05) };
@@ -322,6 +324,8 @@ const Field = {
       // 총대장의 존재: 총대장 3 안의 아군 부대는 사기가 초당 1.5씩 오른다(최대 70) — 무너질 때 총대장 곁으로 모이면 버틴다
       if (g.mor < 70) { const L = this.groups.find((o) => o.side === g.side && this.isLead(o) && !o.b.out && !o.b.generic && o.hp > 0); if (L && Math.hypot(L.x - (g.ux != null ? g.ux : g.x), L.y - (g.uy != null ? g.uy : g.y)) < 3) g.mor = Math.min(70, g.mor + dt * 1.5); }
       const foes = foesOf[g.side], C_ = FLD_CMD[g.cmd] || FLD_CMD.charge;
+      // 패주 장면: 이긴 쪽은 달아나는 적을 뒤쫓아 함성과 함께 밀고 나간다
+      if (this.routing && g.side !== this.routing.s) { g.ux = Math.max(FLD.X0 + 1, Math.min(FLD.X1 - 1, (g.ux != null ? g.ux : g.x) + g.dir * g.S.spd * 0.9 * dt)); g.rally = { x: g.ux, y: g.uy != null ? g.uy : g.y }; if (g.cmd !== "hold") g.cmd = "hold"; }
       // 행군: 첫 접전 전에는 빠르게 다가선다 (개전 직후 빈 전장을 오래 걷지 않게)
       const spd = g.S.spd * g.form.spd * (g.mor < 25 ? 0.85 : 1) * (this.contact ? 1 : 1.4) * (C_.spd || 1) * (1 - g.fat * 0.002); /* 명령(돌격·추격)이 빠르고, 지치면 느려진다 */
       // 돌격은 첫 충돌 3초 뒤(또는 12초가 지나도 닿지 못하면) 보통 공격으로 바뀐다
@@ -355,6 +359,8 @@ const Field = {
         if (tgt && tgt.gen && C_.gen >= 0) { const blk = this.nearest(g, foes.filter((f) => !f.gen), 0.6); if (blk) tgt = blk; }
         // 지배 영역: 적 병사가 1.1 안에 있으면 (사거리 안의 목표 장수를 치는 중이 아니라면) 그 병사부터 상대한다 — 전열을 돌아 후방으로 파고들지 못한다
         if (C_.gen >= 0 && !(tgt && tgt.gen && this.d(g, tgt) <= reach) && !(g.cmd === "gen" && fo)) { /* 장수 돌격으로 목표 적장을 노리는 중이면 병사 벽에 붙잡히지 않는다 */ const zoc = this.nearest(g, foes.filter((f) => !f.gen), 1.1); if (zoc) tgt = zoc; }
+        // 장수가 나서지 않는 명령(대기·방어·집결·병사 돌격): 자기 자리에서 1 넘게 떨어져 있으면 싸움을 끊고 자리로 돌아간다 (병사만 돌아오고 장수가 적진에 남지 않게)
+        if (C_.gen === 0 && tgt) { const back = C_.troop === 0 || g.cmd === "troop"; if (Math.hypot(g.x - (back ? g.rally.x : g.ux), g.y - (back ? g.rally.y : g.uy)) > 1.0) tgt = null; }
         if (C_.gen < 0) {
           this.moveToward(g, this.homeX(g), g.y, spd * (g.broken ? 0.55 : 1.05) * dt); // (무너진 부대의 장수는 느리게 — 추격해 잡을 수 있다)
           if (Math.abs(g.x - this.homeX(g)) < 0.4) this.withdraw(g); // 본진에 닿으면 병력을 보존한 채 전장을 떠난다
@@ -381,7 +387,7 @@ const Field = {
       // 장수는 적 병사 무리를 뚫고 지나가지 못한다: 바로 앞(0.45 안, 같은 줄)에 적 병사가 있으면 그 앞에서 멈춘다 (돌진 무장기는 예외)
       if (!g.b.generic && g.hp > 0 && !g.dash) for (const f of foes) { if (!f.s) continue; const ax = (f.x - g.x) * g.dir; if (ax > 0 && ax < 0.45 && Math.abs(f.y - g.y) < 0.8) { g.x = f.x - g.dir * 0.45; break; } } // (세로 0.8 안 — 옆으로 비켜 돌아가지 못하게)
       // 장수끼리 겹치지 않게 (같은 편이든 적이든 0.9 안이면 세로로 밀어낸다) — 장수 셋이 한 자리에 포개져 라벨 탑이 서지 않게
-      if (!g.b.generic && g.hp > 0) for (const o of this.groups) { if (o === g || o.b.generic || o.b.out || o.hp <= 0) continue; const dx = g.x - o.x, dy = (g.y - o.y) * 1.6, L = Math.hypot(dx, dy); if (L < 1.3) { const push = (1.3 - L) * 0.5, sy = dy === 0 ? (g.side === "atk" ? 1 : -1) : Math.sign(dy); g.y = Math.max(FLD.Y0, Math.min(FLD.Y1, g.y + sy * push * 0.7)); g.x += (dx === 0 ? -g.dir : Math.sign(dx)) * push * 0.3; } }
+      if (!g.b.generic && g.hp > 0) for (const o of this.groups) { if (o === g || o.b.generic || o.b.out || o.hp <= 0) continue; const dx = g.x - o.x, dy = (g.y - o.y) * 1.6, L = Math.hypot(dx, dy); if (L < 1.8) { const push = (1.8 - L) * 0.5, sy = dy === 0 ? (g.side === "atk" ? 1 : -1) : Math.sign(dy); g.y = Math.max(FLD.Y0, Math.min(FLD.Y1, g.y + sy * push * 0.7)); g.x += (dx === 0 ? -g.dir : Math.sign(dx)) * push * 0.3; } }
       if (g.actor) { g.actor.x = g.x; g.actor.y = g.y; if (g.actor.sd) g.actor.sd.setOrder(20 + Math.round(-g.y * 10)); }
       // 무장기 (AI · 자동)
       if (g.mpMax && g.hp > 0 && this.t >= g.aiSk && (!this.ctrl(g.b) || this.autoSkill || (this.skillAssist && g !== this.sel))) { g.aiSk = this.t + 0.6; this.aiSkill(g); }
@@ -406,6 +412,9 @@ const Field = {
           // 경장 산개 사격: 근접 적이 바싹 붙으면 재장전하는 동안 한 걸음 물러나며 쏜다
           if (g.b.cls === 0 && s.cool > 0 && tgt.g.S.melee && this.d(s, tgt) < 1.0 && C_.troop >= 0) { this.moveToward(s, s.x - (tgt.x - s.x), s.y, spd * dt * 0.7); }
           if (s.cool <= 0) this.attack(g, s, tgt, false);
+          // 맞붙어도 진형 자리 쪽으로 약하게 끌린다 (세로 자리 위주) — 난전 속에서도 전선과 대형 모양이 남는다
+          else if (Math.abs(s.y - hy) > 0.25) this.moveToward(s, s.x + (hx - s.x) * 0.2, hy, spd * dt * 0.25);
+          if (s.spr && Math.abs(tgt.x - s.x) > 0.08) s.spr.face = tgt.x > s.x ? 1 : -1; // 싸우는 병사는 늘 적을 본다 (물러나며 쏘거나 자리를 고쳐도 등을 보이지 않게)
         }
         // 앞의 적에게 나설 때도 진형의 세로 자리(hy)와 앞뒤 간격을 지킨다 — 맞붙어도 한 줄로 늘어서지 않고 진형 모양이 남는다
         else if (tgt && Math.hypot(s.x - hx, s.y - hy) < lim) { this.moveToward(s, tgt.x - g.dir * Math.min(sReach * 0.7, 2.4) + s.home.x * 0.5, hy, spd * dt); }
@@ -460,6 +469,8 @@ const Field = {
     // 부대는 자기 줄(laneY)을 지킨다: 적 쪽으로는 45%만 기운다 — 모든 부대가 한 덩어리 기둥으로 모이지 않게 (집결 명령으로 옮긴 줄은 그대로)
     const lane = g.rallied ? g.uy : g.laneY != null ? g.laneY : g.uy;
     let tx = best.x - g.dir * stand, ty = lane + (best.y - lane) * 0.45;
+    // 지략형 우회: 노리는 부대(prey)의 옆구리로 돌아 들어간다 (대형 폭 밖 1.3) — 측면 공격 보너스를 노린다
+    if (g.prey && g.pers === "wily" && g.prey.cy != null && !g.prey.b.out) { const sd = g.uy >= g.prey.cy ? 1 : -1, fy = g.prey.cy + sd * ((g.prey.halfW || 0.6) + 1.3); if (fy > FLD.Y0 + 0.4 && fy < FLD.Y1 - 0.4) { ty = fy; tx = g.prey.cx - g.dir * 0.3; } }
     // 총대장 친위대는 예비대: 총공세 전 「전군 돌격」이면 아군 다른 부대들의 앞줄보다 2.5 뒤에 선다 (다가온 적은 그대로 상대한다)
     if (this.isLead(g) && g.cmd === "charge" && !this.surge) { let fr = null; for (const o of this.groups) if (o !== g && o.side === g.side && !o.b.out && o.ux != null && o.soldiers.some((s) => s.alive)) fr = fr == null ? o.ux : g.dir > 0 ? Math.max(fr, o.ux) : Math.min(fr, o.ux); if (fr != null && (tx - (fr - g.dir * 2.5)) * g.dir > 0) tx = fr - g.dir * 2.5; }
     if ((tx - g.ux) * g.dir < 0 || g.engaged > 0.45) tx = g.ux; // 전열은 스스로 물러나지 않는다 · 맞붙은 부대는 그 자리를 지킨다
@@ -557,7 +568,7 @@ const Field = {
   },
   // idle 표시를 남겨 두면 공격 동작이 끝난 뒤 제자리 걸음이 아니라 대기 자세로 돌아간다
   // 장수 한 번짜리 동작: 원본 동작이 3~13초로 길어 실제 공격 간격에 맞춰 빠르게 튼다
-  gAnim(g, name) { const fx = FUI.stage; if (!fx || !g.actor) return; fx.play(g.actor, name); g.gAnimT = this.t; const c = g.actor.sd, T = { atk: 0.85, skill: 1.5, hit: 0.45 }[name]; if (c && c.clip && T) { const d = c.clip.dur; c.speed = Math.max(1, Math.min(2.5, d / T)); const w = T * c.speed; if (w < d * 0.98) { c.time = Math.max(0, d * 0.45 - w * 0.45); c.until = c.time + w; } } }, // 2.5배 넘게 빨리 감으면 경련처럼 보인다 — 긴 동작은 가운데(타격) 구간만
+  gAnim(g, name) { const fx = FUI.stage; if (!fx || !g.actor) return; fx.play(g.actor, name); g.gAnimT = this.t; const c = g.actor.sd, T = { atk: 0.85, skill: 1.5, hit: 0.45 }[name]; if (c && c.clip && T) { const d = c.clip.dur; c.speed = Math.max(1, Math.min(1.6, d / T)); const w = T * c.speed; if (w < d * 0.98) { c.time = Math.max(0, d * 0.45 - w * 0.45); c.until = c.time + w; } } }, // 1.6배 넘게 빨리 감으면 경련처럼 보인다 — 긴 동작은 가운데(타격) 구간만
   anim(s, name) { if (!s.spr || !FUI.stage) return; s.spr.idle = name === "idle"; if (s.spr.anim !== "atk") FUI.stage.spriteAnim(s.spr, name); },
 
   // 피해 배율: 결속 · 진형 · 진형 상성 · 사기 · 강화
@@ -701,7 +712,7 @@ const Field = {
       const around = (r) => foes.filter((f) => Math.hypot(f.x - pt.x, (f.y - pt.y) * 1.3) < r);
       const py = Math.max(FLD.Y0, Math.min(FLD.Y1, pt.y)), pdir = Math.sign(pt.x - g.x) || g.dir;
       if (sk.kind === "line" || sk.kind === "dash") {
-        const len = sk.kind === "dash" ? 6 : 10, n = foes.filter((f) => (f.x - g.x) * pdir > -0.3 && (f.x - g.x) * pdir < len && Math.abs(f.y - py) < 0.5).length;
+        const len = sk.kind === "dash" ? 6 : 10, n = foes.filter((f) => (f.x - g.x) * pdir > -0.3 && (f.x - g.x) * pdir < len && Math.abs(f.y - py) < 0.7).length;
         if (n) return { y: py, dir: pdir, n };
       } else if ((sk.kind === "blast" || sk.kind === "barrage") && Math.hypot(pt.x - g.x, pt.y - g.y) < 11) {
         const c = around(sk.kind === "blast" ? 1.6 : 3);
@@ -719,7 +730,7 @@ const Field = {
         let best = g.y, bc = 0, bdir = g.dir;
         for (const dd of [g.dir, -g.dir]) for (const dy of [0, -0.4, 0.4, -0.8, 0.8]) {
           const y = Math.max(FLD.Y0, Math.min(FLD.Y1, g.y + dy));
-          const c = foes.filter((f) => (f.x - g.x) * dd > -0.3 && (f.x - g.x) * dd < len && Math.abs(f.y - y) < 0.5).length;
+          const c = foes.filter((f) => (f.x - g.x) * dd > -0.3 && (f.x - g.x) * dd < len && Math.abs(f.y - y) < 0.7).length;
           if (c > bc) { bc = c; best = y; bdir = dd; }
         }
         return bc >= need(sk.kind === "dash" ? 4 : 5) ? { y: best, dir: bdir, n: bc } : null;
@@ -784,7 +795,11 @@ const Field = {
   skCool(sk) { return sk.kind === "rally" || sk.kind === "heal" || sk.kind === "guard" ? 12 : 0; },
   cast(g, i, manual) {
     const sk = g.skills[i];
-    if (!this.canCast(g, i) || this.finished || this.busy) return false;
+    if (!this.canCast(g, i) || this.finished || this.busy) {
+      // 직접 눌렀는데 못 쓰면 이유를 알려 준다 (눌러도 아무 일이 없는 것처럼 보이지 않게)
+      if (manual && sk && !this.sim && !this.finished) FUI.toast(`「${sk.n}」 — ${g.b.out || g.hp <= 0 ? "장수가 전장을 떠났다" : g.stun > 0 ? "기절 중" : g.dash ? "돌진 중" : g.mp < sk.cost ? `기력 부족 (${Math.floor(g.mp)}/${sk.cost})` : this.t < ((g.skCd && g.skCd[i]) || 0) ? `재사용 대기 ${Math.ceil(g.skCd[i] - this.t)}초` : "지금은 쓸 수 없다"}`);
+      return false;
+    }
     if (manual && !this.ctrl(g.b)) return false; // 직접 지휘하지 않는 장수의 무장기는 쓸 수 없다
     this.aimPt = manual && !this.sim && typeof FUI !== "undefined" && FUI.mouseIn ? FUI.mouseW : null;
     const tg = this.aim(g, sk, manual); this.aimPt = null;
@@ -796,7 +811,7 @@ const Field = {
       if (sk.id === "storm" && manual) { // 직접 쓴 대무장기만 컷인과 함께 잠깐(0.5초) 멈춘다 (그 밖의 무장기는 전투를 멈추지 않고 이름만 크게 띄운다)
         this.freeze = 0.5; Sound.voice(g.b.code, "SpSkill", ["BattleFocus"]); Sound.sfx("skillcharge", 0.7);
         UI.cutin(g.b, sk.n, sk.id === "storm" ? "대무장기" : FSK_KIND[sk.kind]);
-      } else if (mine || FUI.onScreen(g.x)) { FUI.skName(this, g, sk.n, sk.big); Sound.sfx("skillcharge", sk.big ? 0.65 : 0.45); }
+      } else if (mine || FUI.onScreen(g.x)) { FUI.skName(this, g, sk.n, sk.big); Sound.sfx("skillcharge", sk.big ? 0.65 : 0.45); if (manual) { this.hitStop = Math.max(this.hitStop || 0, sk.big ? 0.18 : 0.1); FUI.shake(!!sk.big); if (sk.big) FUI.flash(g.side === "atk" ? "#9fd6ff55" : "#ffb38a55"); } } // 직접 쓴 무장기: 짧게 멈칫·흔들림 (손맛)
     }
     const k0 = g.skK;
     const warn = !mine && tg.pts && ["blast", "barrage", "storm"].includes(sk.kind);
@@ -830,7 +845,7 @@ const Field = {
     // 탄막·돌진은 길목에 든 적 수만큼은 쓰러뜨릴 수 있다 (한 줄을 쓸어내는 기술이 1명만 쓰러뜨리는 일이 없게)
     const ctx = { k: 0, cap: (sk.kind === "line" || sk.kind === "dash") && tg.n ? Math.max(capBase, Math.min(tg.n, 14)) : capBase, big: !!sk.big }; // big: 대무장기·원작 스킬은 병사 피해 ×1.8 (맞은 한가운데 병사는 한 번에 쓰러진다)
     switch (sk.kind) {
-      case "line": this.waves.push({ g, x: g.x, y: tg.y, dir: tg.dir, v: 16, left: 10, w: 0.45, dS: 380 * p, dG: 45 * p, hit: new Set(), col, fxT: 0, ctx }); break;
+      case "line": this.waves.push({ g, x: g.x, y: tg.y, dir: tg.dir, v: 16, left: 10, w: 0.7, dS: 380 * p, dG: 45 * p, hit: new Set(), col, fxT: 0, ctx }); break;
       case "dash": g.dash = true; g.guard = Math.max(g.guard, 0.6); this.waves.push({ g, x: g.x, y: tg.y, dir: tg.dir, v: 13, left: 6, w: 0.5, dS: 420 * p, dG: 80 * p, hit: new Set(), col: 0xffe28a, fxT: 0, dash: true, ctx }); break;
       case "barrage": tg.pts.forEach((c, i) => this.later(0.15 + i * 0.28, () => this.blast(g, c.x, c.y, 1.1, 380 * p, 45 * p, 0xffb060, false, ctx))); break;
       case "storm":
@@ -1069,12 +1084,15 @@ const Field = {
   // ── 명령 ──
   setCmd(g, cmd) {
     g.cmd = cmd; g.rallied = false; g.cmdT = this.t; // 집결 표시는 새 명령을 내리면 풀린다
+    // 맞붙은 채 물러나면 대열이 흐트러지고 사기가 꺾인다 (뒤를 보이는 동안은 배후 피해 +30%)
+    if (cmd === "retreat" && (g.engaged || 0) > 0.2) { g.coh = Math.max(0, g.coh - 15); g.mor = Math.max(0, g.mor - 6); }
     if (cmd === "rush") { g.rushT0 = this.t; g.rushCd = this.t; g.impactT = null; g.rushHit = false; for (const s of g.soldiers) s.rushHit = false; g.coh = Math.max(0, g.coh - 8); }
     // 병사 돌격: 장수는 2.5 뒤로 물러나 지휘 / 대기·장수 돌격: 병사는 지금 자리를 지킨다
     // (대기·장수 돌격: 병사는 부대 기준점 그 자리를 지킨다)
     g.rally = cmd === "troop" && !g.b.generic ? { x: Math.max(FLD.X0, Math.min(FLD.X1, g.x - g.dir * 2.5)), y: g.y } : { x: g.ux != null ? g.ux : g.x, y: g.uy != null ? g.uy : g.y };
     // 집결: 장수 곁(조금 뒤)으로 모인다. 장수가 없는 부대는 병사 무리 한가운데로
-    if (cmd === "regroup") { const al = g.soldiers.filter((s) => s.alive); const c = !g.b.generic && g.hp > 0 ? { x: g.x, y: g.y } : al.length ? { x: al.reduce((a, s) => a + s.x, 0) / al.length, y: al.reduce((a, s) => a + s.y, 0) / al.length } : g.rally; g.rally = { x: Math.max(FLD.X0, Math.min(FLD.X1, c.x - g.dir * 0.8)), y: Math.max(FLD.Y0 + 0.3, Math.min(FLD.Y1 - 0.3, c.y)) }; }
+    if (cmd === "regroup") { const al = g.soldiers.filter((s) => s.alive); const mid = al.length ? { x: al.reduce((a, s) => a + s.x, 0) / al.length, y: al.reduce((a, s) => a + s.y, 0) / al.length } : null;
+      const c = !g.b.generic && g.hp > 0 && (!mid || Math.hypot(g.x - mid.x, g.y - mid.y) < 2.5) ? { x: g.x, y: g.y } : mid ? { x: mid.x - g.dir * 0.6, y: mid.y } : al.length ? { x: al.reduce((a, s) => a + s.x, 0) / al.length, y: al.reduce((a, s) => a + s.y, 0) / al.length } : g.rally; g.rally = { x: Math.max(FLD.X0, Math.min(FLD.X1, c.x - g.dir * 0.8)), y: Math.max(FLD.Y0 + 0.3, Math.min(FLD.Y1 - 0.3, c.y)) }; }
   },
   canOrder(g) { return g.side === this.mySide && !g.b.out && (this.ctrl(g.b) || g.b.generic || this.entry.commander); },
   command(cmd) {
@@ -1185,8 +1203,8 @@ const Field = {
         if (r < (g.pers === "bold" ? 0.12 : 0.2) && !this.isLead(g)) cmd = "retreat"; // 공격형은 늦게 물러난다
         else if (r < 0.5 && g.soldiers.some((s) => s.alive)) cmd = "troop";
       }
-      // 성격에 따른 전술 (총대장 친위대·성벽 수비는 제외)
-      if (cmd === "charge" && !this.isLead(g)) { const tac = this.aiTactic(g); if (tac) cmd = tac; } else g.prey = null;
+      // 성격에 따른 전술 (총대장 친위대·성벽 수비는 제외) — 아군 보조 AI는 쓰지 않는다: 돌격·집결·추격은 플레이어의 몫 (자유전투로 맡기면 쓴다)
+      if (cmd === "charge" && !this.isLead(g) && (g.side !== this.mySide || g.free || this.sim)) { const tac = this.aiTactic(g); if (tac) cmd = tac; } else g.prey = null;
       if (g.cmd !== cmd) { this.setCmd(g, cmd); if (!this.sim && cmd === "rush" && (g.side !== this.mySide || g.free) && FUI.onScreen(g.x)) FUI.bubble(this, g, "돌격!", g.side === this.mySide ? "good" : "bad"); }
     }
     // 목표: 적 총대장 앞이 비면 노리고, 아군 총대장에게 적장이 붙으면 가까운 장수가 호위한다
@@ -1225,7 +1243,7 @@ const Field = {
   checkEnd() {
     if (this.finished) return;
     // 패주 장면 중이면 3초 뒤 끝낸다 (패주한 쪽은 out이 되므로 전멸 판정보다 먼저 본다)
-    if (this.routing) { if (this.t - this.routing.t0 >= 3) return this.finish(this.routing.s === "def", this.routing.why); return; }
+    if (this.routing) { if (this.t - this.routing.t0 >= 4) return this.finish(this.routing.s === "def", this.routing.why); return; }
     if (!this.sim && this.slow > 0) return; // 총대장이 쓰러지는 슬로모션을 다 보여 준 뒤에 끝낸다
     const lead = (s) => this.units[s].find((b) => !b.generic) || this.units[s][0];
     const aL = lead("atk"), dL = lead("def");
@@ -1239,12 +1257,13 @@ const Field = {
     if (dGone) return this.finish(true, this.groups.some((g) => g.side === "def" && g.b.withdrawn) ? "수비군 철수 — 거점을 내줬다" : "수비군 전멸!");
     // 총붕괴 뒤 5초가 지나도 다시 서지 못하면(평균 사기 30 미만) 그쪽 총대장이 퇴각을 명한다 — 전멸까지 싸우지 않고 전투가 끝난다
     // 양쪽이 함께 퇴각할 때가 되면 남은 전력이 적은 쪽이 물러난다 (공격측부터 보던 순서 편향을 없앤다)
-    const due = ["atk", "def"].filter((s) => { const ct = this.collapseT && this.collapseT[s]; if (ct == null || this.t - ct < FLD.COLLAPSE_T) return false; const al = this.alive(s); return (al.length ? al.reduce((a, g) => a + g.mor, 0) / al.length : 0) < 30; });
+    const due = ["atk", "def"].filter((s) => { const ct = this.collapseT && this.collapseT[s]; if (ct == null || this.t - ct < FLD.COLLAPSE_T) return false; const al = this.alive(s); return (al.length ? al.reduce((a, g) => a + g.mor, 0) / al.length : 0) < 30 || this.strength(s) < this.strength(s === "atk" ? "def" : "atk") * 0.4; }); // (사기를 되찾아도 남은 전력이 상대의 40%도 안 되면 버틸 수 없다 — 패색이 짙은 잔병이 시간만 끌지 않게)
     if (due.length === 2) due.sort((p, q) => this.strength(p) - this.strength(q));
     for (const s of due.slice(0, 1)) {
       const al = this.alive(s);
       // 패주 장면(3초): 병사들이 본진 쪽으로 달아나고(철수로 보존), 그중 15%는 추격에 쓰러진다. 장수도 물러난다. 카메라가 그쪽을 비춘다
       const why = s === "atk" ? "공격군 총붕괴 — 퇴각했다" : "수비군 총붕괴 — 거점을 버리고 퇴각했다";
+      // (패주 장면은 4초 — 이긴 쪽이 뒤쫓는 모습을 보여 준다)
       if (this.sim) { for (const g of al) { for (const x of g.soldiers) if (x.alive) { x.alive = false; x.wd = true; } g.b.out = true; g.b.withdrawn = true; } return this.finish(s === "def", why); }
       const foeG = this.alive(s === "atk" ? "def" : "atk")[0];
       for (const g of al) { for (const x of g.soldiers) if (x.alive) { if (Math.random() < 0.3) this.killSoldier(x, foeG); else { x.alive = false; x.wd = true; x.flee = 3; if (x.spr) { x.spr.noFall = true; x.spr.idle = false; if (FUI.stage) FUI.stage.spriteAnim(x.spr, "move"); } } } this.setCmd(g, "retreat"); g.b.out = true; g.b.withdrawn = !this.isLead(g); if (g.actor && FUI.stage) FUI.stage.fadeOut(g.actor, 2500); } // (무너진 군의 총대장은 철수가 아니라 패주 — 격파·포로 대상)
@@ -1557,6 +1576,8 @@ const FUI = {
   updCam(F_, real) {
     if (!this.stage) return;
     if (this.keys.size) { const d = (this.keys.has("arrowleft") ? -1 : 0) + (this.keys.has("arrowright") ? 1 : 0); this.camX += d * 16 * real; }
+    // 패주 장면: 카메라가 달아나는 병사 무리와 뒤쫓는 승자 사이를 따라간다 (빈 땅을 비추지 않게)
+    if (F_.routing && !this.follow) { let sx = 0, n = 0; for (const o of F_.groups) for (const s of o.soldiers) if (s.flee > 0 || (o.side !== F_.routing.s && s.alive)) { sx += s.x * (s.flee > 0 ? 2 : 1); n += s.flee > 0 ? 2 : 1; } if (n) this.camX += (sx / n - this.camX) * Math.min(1, real * 2); }
     if (this.follow) this.camX += (this.camTarget(F_) - this.camX) * Math.min(1, real * 2.5);
     // 자동 줌: 카메라 근처(10 안)의 양군 부대가 퍼진 폭에 맞춰 화면 높이를 1~1.5배로 (아래쪽 맨 앞줄은 고정)
     if (this.follow && F_.groups) {
@@ -1686,7 +1707,7 @@ const FUI = {
     // 지형 띠(숲·강)와 성벽 지대: 월드 좌표에 맞춰 지면 위에 깐다
     if (!this.$zones) {
       // 지형 이름만 짧게 (효과 수치는 조작법(H)·출진 화면에) — 전장 위 글자를 줄인다
-      const zs = (F_.terrain || []).map((t) => ({ x0: t.x0, x1: t.x1, y0: t.y0, y1: t.y1, el: h("div", { class: "fZone " + t.kind }, h("span", null, t.kind === "forest" ? "숲" : "강")) }));
+      const zs = (F_.terrain || []).map((t) => ({ x0: t.x0, x1: t.x1, y0: t.y0, y1: t.y1, el: h("div", { class: "fZone " + t.kind }, h("span", null, t.kind === "forest" ? "숲 · 엄폐" : "강 · 이동 느림")) }));
       if (F_.wallK() > 0) zs.push({ x0: FLD.X1 - FLD.WALL_W, x1: FLD.X1, el: h("div", { class: "fZone wall" }, h("span", null, "성벽")) });
       const layer = this.$stage.querySelector(".fZones"); for (const z of zs) layer.append(z.el);
       for (const z of zs) { if (z.el.classList.contains("forest")) z.el.style.backgroundImage = `url(${fieldTex("forest")})`; if (z.el.classList.contains("wall")) z.el.style.setProperty("--wtex", `url(${fieldTex("wall")})`); }
@@ -1854,8 +1875,8 @@ const FUI = {
   floatAt(x, y, life) {
     const now = performance.now(); this.floats = (this.floats || []).filter((f) => f.until > now);
     if (this.floats.length >= 8) return null;
-    if (this.floats.filter((f) => Math.abs(f.x - x) < 90 && Math.abs(f.y - y) < 70).length >= 3) return null; // 한 자리(가로 90·세로 70px)에 셋까지
-    for (let k = 0; k < 4 && this.floats.some((f) => Math.abs(f.x - x) < 70 && Math.abs(f.y - y) < 22); k++) y -= 22;
+    if (this.floats.filter((f) => Math.abs(f.x - x) < 100 && Math.abs(f.y - y) < 80).length >= 2) return null; // 한 자리(가로 100·세로 80px)에 둘까지 — 글자끼리 포개지지 않게
+    for (let k = 0; k < 4 && this.floats.some((f) => Math.abs(f.x - x) < 80 && Math.abs(f.y - y) < 26); k++) y -= 26;
     this.floats.push({ x, y, until: now + life }); return { x, y };
   },
   pop(F_, x, y, v, kind) { if (!this.stage || F_.sim) return; const fl = this.$stage.querySelector(".fFloat"); const p = this.floatAt(this.stage.toScreen(x, y).x, this.stage.toScreen(x, y).y, 700); if (!p) return; const el = h("div", { class: "fPop " + (kind || ""), style: `left:${p.x}px;top:${p.y}px` }, typeof v === "number" ? `-${v}` : v); fl.append(el); setTimeout(() => el.remove(), 1000); },

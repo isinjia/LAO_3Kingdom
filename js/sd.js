@@ -701,6 +701,7 @@
       this.speed = 1;
       this.loop = false;
       this.onEnd = null;
+      this.speed = 1; /* 한 번짜리 동작이 끝나 대기로 돌아가면 배속도 처음으로 */
       this.play('idle');
     }
 
