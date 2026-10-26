@@ -53,7 +53,7 @@ const dudoksOf = (fac) => officersOf(fac).filter((u) => u.dudok === fac);
 const relKey = (a, b) => (a < b ? a + "|" + b : b + "|" + a);
 function relBase(A, B) {
   const pa = perOf(A), pb = perOf(B);
-  return (A.squad && A.squad === B.squad ? 30 : 0) + (A.fac && A.fac === B.fac ? 5 : 0) + (pa.type === pb.type ? 5 : 0) + (PER_CLASH[pa.type] === pb.type || PER_CLASH[pb.type] === pa.type ? -10 : 0);
+  return (A.squad && A.squad === B.squad ? 30 : 0) + (typeof origTie === "function" ? origTie(A.id, B.id) : 0) + (A.fac && A.fac === B.fac ? 5 : 0) + (pa.type === pb.type ? 5 : 0) + (PER_CLASH[pa.type] === pb.type || PER_CLASH[pb.type] === pa.type ? -10 : 0);
 }
 // 양방향 관계 (-100 ~ 100). 플레이어와의 관계는 친밀(bond) - 적대(feud)
 function relOf(a, b) {

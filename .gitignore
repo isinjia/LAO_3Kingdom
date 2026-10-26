@@ -10,3 +10,8 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# 원작 대본에서 뽑은 자료 문서와 원작 표 읽기 도구 (이 PC에만 둔다 — 원작 대사 인용·복호화 포함)
+자료/
+tools/gen_speech.py
+tools/lao_table.py

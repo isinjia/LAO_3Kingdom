@@ -200,6 +200,7 @@ function newGame(playerId, opts = {}) {
 
   const p = P();
   p.bond = 0;
+  if (typeof origTie === "function") for (const u of Object.values(G.units)) if (u.id !== p.id && !u.iron) u.bond = Math.max(u.bond, origTie(p.id, u.id)); // 원작에서 가까운 사이
   if (p.fac && !isLord(p)) p.merit = rnd(120, 280); // 출세 루프는 종사부터
   if (opts.ronin && !isLord(p)) {
     const old = C(p.city); if (old && old.gov === p.id) old.gov = null;
