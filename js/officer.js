@@ -77,7 +77,7 @@ function addRel(a, b, v) {
   G.rel[k] = clamp((G.rel[k] || 0) + v, -140, 140);
   if (relOf(a, b) >= 100 && !(G.oath ||= {})[k]) {
     G.oath[k] = true;
-    if (A.fac && (A.fac === P().fac || B.fac === P().fac)) log(`${jo(A.name, "와과")} ${jo(B.name, "이가")} 의자매의 연을 맺었다.`);
+    oathScene(A, B);
   }
 }
 const isOath = (a, b) => !!(G.oath && G.oath[relKey(a, b)]);
@@ -178,6 +178,7 @@ const TASK_KIND = {
   draft: { ko: "징병", stat: "cha", need: 120, gold: 150 },
   search: { ko: "인재 탐색", stat: "int", need: 100, gold: 0 },
   recruit: { ko: "등용 교섭", stat: "cha", need: 90, gold: 0, aim: true },
+  diplo: { ko: "친선 사절", stat: "pol", need: 110, gold: 300, diplo: true },
 };
 const taskBusy = (id) => (G.tasks || []).some((t) => t.doers.includes(id));
 const playerTask = () => (G.tasks || []).find((t) => t.doers.includes(G.player));
@@ -190,11 +191,13 @@ function taskRate(t) {
 // 협력 보너스: 주 수행 장수와 친우 이상인 협력자 1명당 +10%
 function coopBonus(t) { return t.doers.slice(1).filter((id) => relOf(t.doers[0], id) >= 60).length * 0.1; }
 function taskEta(t) { const from = Math.max(t.start, Math.min(dayNow(), t.last || t.start)); return from + Math.max(1, Math.ceil((t.need - t.prog) / taskRate(t))); }
-function taskName(t) { const k = TASK_KIND[t.kind]; return k.aim && U(t.aim) ? `${k.ko} — ${U(t.aim).name}` : k.ko; }
+function taskName(t) { const k = TASK_KIND[t.kind]; return k.aim && U(t.aim) ? `${k.ko} — ${U(t.aim).name}` : k.diplo && F(t.fac2) ? `${k.ko} — ${F(t.fac2).name}` : k.ko; }
+// 친선 사절을 보낼 수 있는 세력: 살아 있는 바이오로이드 세력 중 휴전하지 않은 곳
+const diploTargets = (fac) => Object.values(G.factions).filter((f) => f.alive && !f.iron && f.key !== fac && !G.truce[f.key]);
 
 function mkTask(kind, fac, issuer, doers, city, opts = {}) {
   const k = TASK_KIND[kind];
-  const t = { id: (G.taskSeq = (G.taskSeq || 0) + 1), kind, fac, issuer, doers: doers.slice(), city, aim: opts.aim || null, need: k.need, prog: 0,
+  const t = { id: (G.taskSeq = (G.taskSeq || 0) + 1), kind, fac, issuer, doers: doers.slice(), city, aim: opts.aim || null, fac2: opts.fac2 || null, need: k.need, prog: 0,
     start: opts.start != null ? opts.start : dayNow(), reward: opts.reward || 100 + rnd(0, 6) * 10, origin: opts.origin || "issue" };
   t.eta = taskEta(t);
   (G.tasks ||= []).push(t);
@@ -204,6 +207,7 @@ function taskValid(t) {
   const c = C(t.city); if (!c || c.owner !== t.fac) return "거점을 잃었다";
   for (const id of t.doers) { const u = U(id); if (!u || !u.alive || u.missing || u.fac !== t.fac || u.city !== t.city) return `${u ? u.name : "수행 장수"}의 신변에 변화가 생겼다`; }
   if (t.kind === "recruit") { const a = U(t.aim); if (!a || a.fac || !a.alive) return "교섭 상대가 이미 다른 길을 택했다"; }
+  if (t.kind === "diplo") { const f = F(t.fac2); if (!f || !f.alive || f.key === t.fac) return "교섭 상대 세력이 사라졌다"; }
   return null;
 }
 // 완료: 공적·충성·관계·도시 수치 갱신
@@ -223,6 +227,11 @@ function taskComplete(t, day) {
       if (chance(25 + main.st.cha / 3 + relOf(main.id, f.id) / 3)) { f.fac = t.fac; f.loyal = rnd(65, 85); f.merit = Math.max(f.merit, 150); res = `${jo(f.name, "을를")} 찾아내 등용했다`; if (t.fac === P().fac) G.stats.recruits++; }
       else res = `${jo(f.name, "을를")} ${t.city}에 데려왔다 (등용은 거절)`;
     } else res = "인근에 재야 인재가 없었다";
+  } else if (t.kind === "diplo") {
+    const f = F(t.fac2); const lord = U(f.lord);
+    const front = citiesOf(f.key).some((x) => neighbors(x.name).some((n) => C(n).owner === "iron"));
+    if (chance(clamp(25 + s / 3 + main.st.cha / 6 + relOf(main.id, lord.id) / 3 + (front ? 15 : 0), 5, 90))) { G.truce[f.key] = Math.max(G.truce[f.key] || 0, 12); addRel(main.id, lord.id, 10); res = `${jo(f.name, "와과")} 12개월 휴전`; if (t.fac === P().fac) chron(`${jo(f.name, "와과")} 휴전 (사절 ${main.name})`); }
+    else { addRel(main.id, lord.id, 3); res = `${f.name}와의 교섭 결렬`.replace(`${f.name}와`, jo(f.name, "와과")); }
   } else if (t.kind === "recruit") {
     const a = U(t.aim);
     if (chance(clamp(30 + main.st.cha / 2 + relOf(main.id, a.id) / 2 - (a.feud || 0) / 2, 5, 95))) { a.fac = t.fac; a.loyal = rnd(65, 85); a.merit = Math.max(a.merit, 150); addRel(main.id, a.id, 10); res = `${jo(a.name, "이가")} 합류했다`; if (t.fac === P().fac) G.stats.recruits++; }
@@ -313,12 +322,13 @@ function actTaskPropose(kind, aim) {
   if (c.owner !== p.fac) return notify("임무 제안", "소속 세력의 거점에서만 제안할 수 있다.");
   if (playerTask()) return notify("임무 제안", "이미 맡은 임무가 있다.");
   if (k.aim && (!U(aim) || U(aim).fac || U(aim).city !== p.city)) return;
+  if (k.diplo && !diploTargets(p.fac).includes(F(aim))) return notify("임무 제안", "사절을 보낼 세력을 골라야 한다.");
   if (c.gold < k.gold + 100) return notify("임무 제안", `거점 자금이 부족하다. (${k.gold + 100} 필요)`);
   if (!spend(20)) return;
   const sup = superiorOf(p);
   if (!chance(proposeTaskChance(p))) { addMerit(p, 5); return notify("제안 기각", `${sup.name}: "지금은 그 일보다 급한 게 있다."`, sup.id); }
   c.gold -= k.gold;
-  const t = mkTask(kind, p.fac, sup.id, [p.id], p.city, { aim, origin: "propose", reward: Math.round((120 + rnd(0, 6) * 10) * 1.3) });
+  const t = mkTask(kind, p.fac, sup.id, [p.id], p.city, { aim: k.diplo ? null : aim, fac2: k.diplo ? aim : null, origin: "propose", reward: Math.round((120 + rnd(0, 6) * 10) * 1.3) });
   addRel(sup.id, p.id, 3);
   notify("제안 승인", `${sup.name}: "좋은 생각이다. 그 일은 그대가 맡아라."\n\n임무 「${taskName(t)}」 · 예상 완료 ${dayStr(t.eta)} · 보상 공적 +${t.reward}`, sup.id, "ActionApprove", "clear");
 }
@@ -330,13 +340,14 @@ function actTaskIssue(kind, doerId, helperIds = [], aim) {
   if (taskBusy(u.id)) return notify("임무 발령", `${jo(u.name, "은는")} 이미 임무를 수행 중이다.`);
   const c = C(u.city);
   if (k.aim && (!U(aim) || U(aim).fac || U(aim).city !== u.city)) return notify("임무 발령", "등용 교섭 상대는 같은 거점의 재야 장수여야 한다.");
+  if (k.diplo && !diploTargets(p.fac).includes(F(aim))) return notify("임무 발령", "사절을 보낼 세력을 골라야 한다.");
   if ((G.tasks || []).filter((t) => t.issuer === p.id).length >= 8) return notify("임무 발령", "동시에 발령할 수 있는 임무는 8건까지다.");
   if (c.gold < k.gold) return notify("임무 발령", `${c.name}의 자금이 부족하다. (${k.gold} 필요)`);
   if (!spend(10)) return;
   if (!chance(issueAccept(u))) { addRel(p.id, u.id, -3); return notify("명령 거부", `${u.name}: "…그 명령은 따를 수 없어요."\n(충성 ${u.loyal} — 포상·연회로 마음을 돌려 보자)`, u.id); }
   c.gold -= k.gold;
   const hs = helperIds.map(U).filter((x) => x && x.fac === p.fac && x.city === u.city && x.id !== u.id && !taskBusy(x.id) && !isLord(x)).slice(0, 3).map((x) => x.id);
-  const t = mkTask(kind, p.fac, p.id, [u.id, ...hs], u.city, { aim });
+  const t = mkTask(kind, p.fac, p.id, [u.id, ...hs], u.city, { aim: k.diplo ? null : aim, fac2: k.diplo ? aim : null });
   log(`${u.name}에게 임무 「${taskName(t)}」 발령${hs.length ? ` (협력 ${hs.map((x) => U(x).name).join(", ")})` : ""} · 예상 완료 ${dayStr(t.eta)}`, "sys");
   G.toast = { text: `임무 발령 — ${taskName(t)} · ${dayStr(t.eta)} 완료 예정`, kind: "good" };
 }
@@ -380,18 +391,31 @@ function aiStrat(f) {
 // 중신 이상: 평정에서 의견 제시 (분기마다 1회)
 function voiceChance(p) { const lord = U(F(p.fac).lord); return Math.round(clamp(30 + p.st.int / 3 + p.st.pol / 6 + relOf(lord.id, p.id) / 3 + (hasFame("군사", 2) ? 15 : 0), 5, 95)); }
 const quarterKey = () => G.year * 4 + Math.floor((G.month - 1) / 3);
-function actStratVoice(goal, target) {
+// 의견을 내면 다른 중신이 반론하기도 한다 (60%). 반환: 반론자 id, 반론 없음 null, 낼 수 없으면 false
+function stratVoiceBegin() {
   const p = P();
-  if (roleLv(p) < 2 || isLord(p)) return;
-  if (G.flags.voiceQ === quarterKey()) return notify("평정", "이번 분기에는 이미 의견을 냈다.");
-  if (!spend(15)) return;
+  if (roleLv(p) < 2 || isLord(p)) return false;
+  if (G.flags.voiceQ === quarterKey()) { notify("평정", "이번 분기에는 이미 의견을 냈다."); return false; }
+  if (!spend(15)) return false;
   G.flags.voiceQ = quarterKey();
   const lord = U(F(p.fac).lord);
-  if (chance(voiceChance(p))) {
-    setStrat(p.fac, goal, target, p.id); addMerit(p, 40); addRel(lord.id, p.id, 3); fameAdd("군사");
-    notify("의견 채택", `${lord.name}: "${p.name}의 말이 옳다. 이번 분기는 「${stratName(G.strat[p.fac])}」이다."\n\n${STRAT[goal].d}\n분기 안에 이루면 공적 보상.`, lord.id, "ActionApprove", "clear");
-  } else { addMerit(p, 10); notify("의견 보류", `${lord.name}: "생각해 보지. 하지만 이번엔 「${stratName(stratOf(p.fac))}」로 간다."`, lord.id); }
+  const opp = officersOf(p.fac).filter((u) => u.id !== p.id && !isLord(u) && (u.city === lord.city || u.city === p.city) && (rankOf(u) >= 2 || u.st.int >= 65)).sort((a, b) => b.st.int - a.st.int)[0];
+  return opp && chance(60) ? opp.id : null;
 }
+// mode: "win" 설전 승리(채택) · "lose" 설전 패배(보류) · "yield" 물러섬(채택 -10%) · "roll" 반론 없음
+function stratVoiceEnd(goal, target, mode, oppId) {
+  const p = P(); const lord = U(F(p.fac).lord); const opp = U(oppId);
+  const adopt = mode === "win" || (mode !== "lose" && chance(voiceChance(p) - (mode === "yield" ? 10 : 0)));
+  if (adopt) {
+    setStrat(p.fac, goal, target, p.id); addMerit(p, mode === "win" ? 60 : 40); addRel(lord.id, p.id, 3); fameAdd("군사");
+    if (opp) addRel(p.id, opp.id, mode === "win" ? -3 : -1);
+    notify("의견 채택", `${lord.name}: "${mode === "win" ? `${opp ? opp.name : "반대파"}의 반론보다 ${p.name}의 논리가 앞섰다. ` : ""}${p.name}의 말이 옳다. 이번 분기는 「${stratName(G.strat[p.fac])}」이다."\n\n${STRAT[goal].d}\n분기 안에 이루면 공적 보상.`, lord.id, "ActionApprove", "clear");
+  } else {
+    addMerit(p, mode === "lose" ? 5 : 10); if (opp && mode === "lose") addRel(p.id, opp.id, 2);
+    notify("의견 보류", `${lord.name}: "${mode === "lose" ? `이번엔 ${opp ? opp.name : "반대파"}의 말에 더 일리가 있군. ` : "생각해 보지. 하지만 "}이번엔 「${stratName(stratOf(p.fac))}」로 간다."`, lord.id);
+  }
+}
+function actStratVoice(goal, target) { const o = stratVoiceBegin(); if (o !== false) stratVoiceEnd(goal, target, "roll", o); }
 // 군주: 전략 목표 결정 (분기마다 1회)
 function actStratSet(goal, target) {
   const p = P(); if (!isLord(p)) return;
@@ -650,6 +674,8 @@ function officerMonth() {
   // 8) 인연 단계 확인 · 상인 위명 수입
   for (const u of Object.values(G.units)) if (u.alive && !u.iron && u.id !== G.player && (u.bond || u.feud)) bondStage(u);
   if (fameTier(p, "상인") >= 3) p.gold += 50;
+  // 9) 질병·사망·군주 후계
+  illnessMonth();
 }
 function x_ok(friend) { return friend.fac && F(friend.fac) && F(friend.fac).alive; }
 function npcIndependence(u) {
@@ -669,6 +695,7 @@ function npcIndependence(u) {
   const msg = `${u.city} 태수 ${jo(u.name, "이가")} ${jo(old.name, "와과")} 결별하고 독립했다!${fol.length ? ` 따르는 자: ${fol.slice(0, 5).join(", ")}${fol.length > 5 ? " 외" : ""}` : ""}`;
   log(msg, "war");
   if (p.fac === old.key || (p.fac && neighbors(c.name).some((n) => C(n).owner === p.fac))) { chron(`${u.name} 독립 (← ${old.name})`); notify("태수 독립", msg, u.id, "Leader", "warn"); }
+  if (p.fac === old.key) queueSuppress(key, c.name);
 }
 
 // 전투 협력: 함께 싸운 장수끼리 가까워지고, 위명 실적이 쌓인다
@@ -913,4 +940,170 @@ function yearAward(p) {
   if (top && typeof randItem === "function" && chance(50)) gainItem(randItem([10, 50, 35, 5]), "논공행상");
   notify("논공행상", `${G.year}년을 마무리하며 ${jo(lord.name, "이가")} 공을 따졌다.\n\n세력 내 공적 ${rank}위 / ${os.length}명${top ? " — 으뜸가는 공신으로 꼽혔다!" : ""}\n상금 ${gold} · ${lord.name} 친밀 +${top ? 5 : 2}`, lord.id, top ? "PresentGet" : "ActionApprove", top ? "rankup" : "coin");
   log(`논공행상 — 공적 ${rank}위, 상금 ${gold}`, "good");
+}
+
+// ── 질병·사망·군주 후계 ────────────────────
+// 병에 걸리면 2~4개월 앓는다. 앓는 동안 매달 8%(병문안·약을 받으면 4%)로 세상을 떠난다 (플레이어는 죽지 않는다)
+const NO_DEATH = ["PECS_LemonadeAlpha"]; // 이야기 이벤트에서 말하는 장수
+const careRel = (u) => { const p = P(); return u.fac && (u.fac === p.fac) || u.city === p.city || u.bond >= 40; };
+function illnessMonth() {
+  const p = P(); const now = monthIdx();
+  for (const u of Object.values(G.units)) {
+    if (!u.alive || u.iron || u.missing) continue;
+    if (u.sick) {
+      u.sick--;
+      const cared = u.cared >= now - 1;
+      if (u.id !== G.player && !NO_DEATH.includes(u.id) && G.year >= 2 && chance(cared ? 4 : 8)) { unitDies(u, "병으로"); continue; }
+      if (!u.sick && careRel(u)) log(`${jo(u.name, "이가")} 병상에서 일어났다.`, "good");
+      continue;
+    }
+    if (chance(G.year >= 4 ? 0.3 : 0.18)) {
+      u.sick = rnd(2, 4);
+      if (u.id === G.player) notify("병", `몸이 무겁다… 병에 걸렸다. (${u.sick}개월)\n앓는 동안 매달 행동력 -20 · 체력 50 이하.\n휴식하면 빨리 낫는다.`, u.id, null, "warn");
+      else if (careRel(u)) log(`${jo(u.name, "이가")} 병에 걸렸다. (같은 거점이면 병문안으로 회복을 도울 수 있다)`, "bad");
+    }
+  }
+}
+function unitDies(u, why) {
+  const p = P(); const f = F(u.fac); const wasLord = isLord(u); const c = C(u.city);
+  const close = u.sworn || u.bond >= 60;
+  u.alive = false; u.sick = 0; u.dudok = null; u.follow = null;
+  if (c && c.gov === u.id) c.gov = null;
+  const msg = `${jo(u.name, "이가")} ${why} 세상을 떠났다.${wasLord && f ? ` (${f.name}의 군주)` : ""}`;
+  log(msg, "bad");
+  if (close || (f && (f.key === p.fac || wasLord))) chron(`${u.name} 사망`);
+  if (close || (f && f.key === p.fac && (wasLord || isGov(u) || rankOf(u) >= 2))) notify("부고", msg + (close ? "\n\n…함께한 날들이 떠오른다." : ""), u.id, null, "warn");
+  if (wasLord && f) succession(f, u);
+  if (c) assignGov(c);
+}
+// 군주가 죽으면 공적·관계·같은 부대를 따져 후계자를 정한다. 새 군주를 따르지 않는 장수는 떠나거나 독립한다
+function succession(f, dead) {
+  const p = P();
+  const cands = officersOf(f.key).filter((x) => x.id !== dead.id);
+  if (!cands.length) { for (const c of citiesOf(f.key)) { c.owner = null; c.gov = null; } f.alive = false; log(`${jo(f.name, "은는")} 후계자 없이 무너졌다.`, "war"); return; }
+  const score = (x) => x.merit / 100 + relOf(dead.id, x.id) * 0.5 + (x.squad && x.squad === dead.squad ? 20 : 0) + rankOf(x) * 8 + x.st.cha / 5;
+  const heir = cands.sort((a, b) => score(b) - score(a))[0];
+  f.lord = heir.id; heir.loyal = 100; heir.dudok = null; heir.merit = Math.max(heir.merit, 3000);
+  const hc = C(heir.city); if (hc && hc.owner === f.key) hc.gov = heir.id;
+  const left = []; let indep = null;
+  for (const x of cands) {
+    if (x.id === heir.id || x.id === G.player || !x.alive || x.fac !== f.key) continue;
+    const r = relOf(heir.id, x.id); x.loyal = clamp(x.loyal - 8 + Math.round(r / 5), 0, 100);
+    if (!indep && isGov(x) && perOf(x).amb >= 70 && x.loyal < 50 && citiesOf(f.key).length >= 3 && capitalOf(f.key) !== x.city && chance(50)) { indep = x.name; npcIndependence(x); continue; }
+    if ((r < -20 || (perOf(x).amb >= 80 && perOf(x).gi < 40)) && chance(35)) { const oc = C(x.city); x.fac = null; if (oc && oc.gov === x.id) { oc.gov = null; assignGov(oc); } left.push(x.name); }
+  }
+  const tail = `${left.length ? `\n새 군주를 따르지 않고 떠난 장수: ${left.slice(0, 5).join(", ")}${left.length > 5 ? " 외" : ""}` : ""}${indep ? `\n${jo(indep, "이가")} 혼란을 틈타 독립했다.` : ""}`;
+  log(`${f.name}: ${dead.name}의 뒤를 이어 ${jo(heir.name, "이가")} 군주가 되었다.`, "war");
+  if (f.key === p.fac) {
+    chron(heir.id === G.player ? "군주 승계" : `${heir.name} 군주 승계`);
+    if (heir.id === G.player) { G.mission = null; G.missionOffer = null; G.tasks = (G.tasks || []).filter((t) => !t.doers.includes(p.id)); }
+    notify("군주 승계", heir.id === G.player ? `${dead.name}의 유언에 따라, 그대가 ${f.name}의 새 군주가 되었다!\n이제 세력 전체를 이끈다.${tail}` : `${jo(dead.name, "이가")} 남긴 자리를 ${jo(heir.name, "이가")} 이었다.\n${heir.name}: "선대의 뜻을 잇겠다. 모두 힘을 빌려 다오."${tail}`, heir.id, "Leader", heir.id === G.player ? "rankup2" : "warn");
+  }
+}
+// 병문안: 같은 거점의 아픈 장수를 찾아간다
+function actVisitSick(id) {
+  const p = P(); const u = U(id);
+  if (!u || !u.sick || u.city !== p.city || u.id === p.id) return;
+  if (!spend(15)) return;
+  u.cared = monthIdx(); addRel(p.id, u.id, 8);
+  const quick = chance(40); if (quick) u.sick = Math.max(0, u.sick - 1);
+  log(`${jo(u.name, "을를")} 병문안했다. 친밀 +8${quick ? " · 회복이 빨라졌다" : ""} (위독할 위험 절반)`, "good");
+  G.toast = { text: `${u.name} 병문안 — 친밀 +8`, kind: "bond" };
+}
+// 아플 때 휴식하면 절반 확률로 하루빨리 낫는다
+function restCure(p) { if (p.sick && chance(50)) { p.sick--; log(p.sick ? `몸이 조금 나아졌다. (남은 ${p.sick}개월)` : "병이 나았다!", "good"); } }
+// 새 달 시작: 병·수행의 행동력 감소, 이어 가던 길
+function officerNewMonth() {
+  const p = P();
+  if (p.sick) { G.ap = Math.max(0, G.ap - 20); p.hp = Math.min(p.hp, 50); }
+  if (p.away && p.away <= monthIdx()) { if (p.away === monthIdx()) { G.ap = Math.max(0, G.ap - 30); log("수행을 마치고 돌아오는 길이다. 행동력 -30"); } p.away = null; }
+  continueTrip();
+}
+
+// ── 수행: 이번 달 남은 행동력을 모두 써서 무예·학문을 닦는다 ──
+const PILGRIM = {
+  무예: { main: "war", sub: "ldr", skills: ["일기", "돌격", "훈련"] },
+  학문: { main: "int", sub: "pol", skills: ["논객", "화계", "기술", "농정"] },
+};
+function actPilgrim(kind) {
+  const p = P(); const k = PILGRIM[kind]; if (!k) return;
+  if (G.ap < 50) return notify("수행", "수행을 떠나려면 행동력 50 이상이 남아 있어야 한다.");
+  if (p.gold < 100) return notify("수행", "노자가 부족하다. (개인 자금 100 필요)");
+  const used = G.ap; G.ap = 0; p.gold -= 100; p.away = monthIdx() + 1;
+  const m = Math.round(used * 0.9), s = Math.round(used * 0.35);
+  gainExp(p, k.main, m); gainExp(p, k.sub, s);
+  let learned = null;
+  const can = k.skills.filter((x) => !p.skills.includes(x));
+  if (can.length && p.skills.length < 4 && chance(30)) { learned = pick(can); p.skills.push(learned); chron(`수행으로 특기 「${learned}」 습득`); }
+  log(`${kind} 수행 — ${STAT_KO[k.main]} 경험 +${m} · ${STAT_KO[k.sub]} 경험 +${s}${learned ? ` · 특기 「${learned}」 습득!` : ""} (다음 달 행동력 -30)`, "good");
+  if (learned) notify("수행", `고된 수행 끝에 새로운 경지에 올랐다.\n특기 「${learned}」 — ${SKILLS[learned]}`, p.id, "MVP", "rankup2");
+  else G.toast = { text: `${kind} 수행 — ${STAT_KO[k.main]} 경험 +${m}`, kind: "good" };
+}
+
+// ── 장수끼리 의자매 결의 장면 ──
+function oathScene(A, B) {
+  const p = P();
+  const near = (A.fac && (A.fac === p.fac || B.fac === p.fac)) || A.city === p.city || B.city === p.city;
+  if (!near) return;
+  if ((G.flags.oathMsg || 0) > monthIdx()) { log(`${jo(A.name, "와과")} ${jo(B.name, "이가")} 의자매의 연을 맺었다.`); return; }
+  G.flags.oathMsg = monthIdx() + 6;
+  chron(`${A.name}·${B.name} 의자매 결의`);
+  notify("의자매 결의", `${A.city}의 조용한 밤.\n${A.name}: "${pick(["태어난 곳은 달라도, 쓰러질 땐 같이 쓰러지자.", "오늘부터 네 등은 내가 지킬게.", "이 전쟁이 끝날 때까지… 아니, 끝나도 함께야."])}"\n${B.name}: "${pick(["…응. 약속이야.", "좋아. 이제 우린 자매야.", "그 말, 잊지 마."])}"\n\n${jo(A.name, "와과")} ${jo(B.name, "이가")} 의자매의 연을 맺었다. (서로 이적·독립을 따라간다)`, A.id, "Oath", "bond");
+}
+
+// ── 개인 이벤트 추가: 도적·떠돌이 상인·아픈 친구·반란 진압 ──
+const ITEM_PRICE = { RE: 150, MP: 350, SP: 900, EX: 2500 };
+Object.assign(OEV, {
+  // 도적 출몰: 토벌하면 치안·명성, 내버려 두면 거점이 털린다
+  bandits: { w: 2,
+    cond: (p) => { const c = C(p.city); return c.owner && !F(c.owner).iron && c.order < 80 ? { c: c.name } : null; },
+    make: (p, e) => ({ title: "도적 출몰", who: null, text: `${e.c} 외곽에 무장한 약탈자 무리가 나타났다!\n\n토벌 성공률 약 ${banditChance(p, C(e.c))}% (무력·통솔${C(e.c).owner === p.fac && (isGov(p) || isLord(p)) ? " · 거점 병력 지원" : ""})\n성공: 치안 +6 · 명성 +50 · 전리품 / 실패: 체력 -25\n내버려 두면 치안 -5 · 거점 자금 -100`, yes: "토벌한다", no: "내버려 둔다" }),
+    apply: (p, e, ok) => {
+      const c = C(e.c);
+      if (!ok) { c.order = clamp(c.order - 5, 0, 100); const g = Math.min(c.gold, 100); c.gold -= g; return `도적이 ${c.name}을 휩쓸었다. 치안 -5 · 거점 자금 -${g}`.replace(`${c.name}을`, jo(c.name, "을를")); }
+      if (chance(banditChance(p, c))) { c.order = clamp(c.order + 6, 0, 100); addMerit(p, 50); const g = rnd(80, 200); p.gold += g; gainExp(p, "war", 20); fameAdd(p.fac ? "무관" : "협객"); if (c.gov && c.gov !== p.id) addRel(p.id, c.gov, 4); return `도적 토벌 성공! 치안 +6 · 명성 +50 · 전리품 자금 +${g}`; }
+      p.hp = clamp(p.hp - 25, 0, 100); c.order = clamp(c.order - 2, 0, 100); return "토벌에 실패했다… 체력 -25";
+    } },
+  // 떠돌이 상인: 장비를 판다
+  merchant: { w: 2,
+    cond: (p) => { if (p.gold < 300 || typeof randItem !== "function") return null; const k = randItem([45, 40, 13, 2]); return k && p.gold >= ITEM_PRICE[EQUIP[k].t] ? { n: k } : null; },
+    make: (p, e) => { const it = EQUIP[e.n]; return { title: "떠돌이 상인", who: null, text: `구 시대 물건을 짊어진 상인이 찾아왔다.\n"좋은 물건 있수다. ${it.n}, 단돈 ${ITEM_PRICE[it.t]}!"\n\n${SLOT_KO[it.s]} · 등급 ${it.t} · ${STAT_KO[it.st]} +${it.v} (개인 자금 ${p.gold})`, yes: `산다 (${ITEM_PRICE[it.t]})`, no: "됐다" }; },
+    apply: (p, e, ok) => {
+      const it = EQUIP[e.n]; const price = ITEM_PRICE[it.t];
+      if (!ok) return "상인을 돌려보냈다.";
+      if (p.gold < price) return "자금이 모자라 사지 못했다.";
+      p.gold -= price; gainItem(e.n, "떠돌이 상인"); return `${jo(it.n, "을를")} 샀다. 자금 -${price}`;
+    } },
+  // 아픈 친구: 약을 보낸다
+  sickfriend: { w: 3,
+    cond: (p) => { const u = pick(Object.values(G.units).filter((u) => u.alive && u.sick && !u.iron && u.id !== p.id && u.bond >= 40 && u.city !== p.city)); return u && p.gold >= 100 ? { a: u.id } : null; },
+    make: (p, e) => ({ title: "병상의 소식", who: e.a, text: `${U(e.a).city}에서 소식이 왔다. ${jo(U(e.a).name, "이가")} 병으로 앓아누웠다고 한다.\n\n약과 편지를 보내면(자금 100) 친밀 +6, 위독할 위험이 절반으로 준다.`, yes: "약을 보낸다", no: "마음만 보낸다" }),
+    apply: (p, e, ok) => {
+      const u = U(e.a);
+      if (!ok || p.gold < 100) { addRel(p.id, u.id, 1); return `${u.name}의 쾌유를 빌었다.`; }
+      p.gold -= 100; u.cared = monthIdx(); addRel(p.id, u.id, 6); return `${u.name}에게 약과 편지를 보냈다. 친밀 +6`;
+    } },
+  // 반란 진압: 내 세력에서 태수가 독립하면 (무작위로는 나오지 않는다)
+  suppress: { w: 0, cond: () => null,
+    make: (p, e) => isLord(p)
+      ? { title: "반란", who: U(F(e.k).lord) ? F(e.k).lord : null, text: `${e.c}에서 ${F(e.k).name}이 깃발을 올렸다!\n\n이웃 거점에서 곧바로 진압군을 보낼 수 있다. 독립을 인정하면 12개월 휴전한다.`.replace(`${F(e.k).name}이`, jo(F(e.k).name, "이가")), yes: "진압군을 보낸다", no: "독립을 인정한다" }
+      : { title: "반란", who: U(F(e.k).lord) ? F(e.k).lord : null, text: `${e.c}에서 ${F(e.k).name}이 깃발을 올렸다!\n${U(F(p.fac).lord).name}이 진압군을 꾸린다.\n\n자원하면 진압군에 합류한다(이웃 거점에 있을 때). 성공하면 공적 +120.`.replace(`${F(e.k).name}이`, jo(F(e.k).name, "이가")).replace(`${U(F(p.fac).lord).name}이`, jo(U(F(p.fac).lord).name, "이가")), yes: "진압에 자원한다", no: "지켜본다" },
+    apply: (p, e, ok) => {
+      const nf = F(e.k); const to = C(e.c);
+      if (!nf || !nf.alive || to.owner !== e.k || !p.fac) return "반란군의 사정이 바뀌었다.";
+      if (!ok) { if (isLord(p)) { G.truce[e.k] = 12; return `${jo(nf.name, "와과")} 12개월 휴전했다.`; } return "진압을 지켜보기로 했다."; }
+      const from = neighbors(e.c).map(C).filter((c) => c.owner === p.fac).sort((a, b) => b.troops - a.troops)[0];
+      if (!from || from.troops < 2000) return "진압군을 보낼 이웃 거점이 없다.";
+      const join = !isLord(p) && p.city === from.name;
+      const send = Math.round(from.troops * 0.6);
+      const atk = pickArmy(from.name, p.fac, send, 5, join ? p : null);
+      autoBattle({ atkFac: p.fac, from: from.name, to: e.c, atk, sent: send });
+      if (to.owner === p.fac) { addMerit(p, isLord(p) ? 60 : join ? 120 : 30); if (join) fameAdd("장군"); return `${from.name}에서 출진한 진압군이 ${jo(e.c, "을를")} 되찾았다!${join ? " (진압군에 합류 · 공적 +120)" : ""}`; }
+      return `진압군이 ${e.c} 공략에 실패했다.`;
+    } },
+});
+function banditChance(p, c) { return Math.round(clamp(30 + (p.st.war + p.st.ldr) / 4 + (c.owner === p.fac && (isGov(p) || isLord(p)) ? 15 : 0) - (p.sick ? 15 : 0), 10, 95)); }
+function queueSuppress(key, city) {
+  const p = P(); const e = { type: "oev", key: "suppress", k: key, c: city };
+  Object.assign(e, OEV.suppress.make(p, e)); G.queue.push(e);
 }

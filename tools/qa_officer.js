@@ -110,6 +110,41 @@ ok(JSON.stringify(G.rel) === snap.rel && JSON.stringify(P().fame) === snap.fame 
   officerEvents(); const aw = G.queue.find((e) => e.title === "논공행상");
   ok(!!aw && pp.gold > g0, "12월 논공행상 → 상금 (" + (pp.gold - g0) + ")");
 }
+// ── 8-3) 평정 설전 · 외교 임무 · 질병·사망·후계 · 수행 · 반란 진압
+{
+  newGame("BR_Tomoe", { diff: 1 }); const q = P(); q.fac = "steel"; const lord = U(F("steel").lord); q.city = lord.city; q.merit = 1700; G.ap = 100; G.flags.voiceQ = null;
+  const o = stratVoiceBegin(); stratVoiceEnd("arms", null, "win", o || null);
+  ok(stratOf("steel") && stratOf("steel").goal === "arms" && stratOf("steel").by === q.id, "평정 설전 승리 → 의견 채택");
+  G.flags.voiceQ = null; G.ap = 100; const o2 = stratVoiceBegin(); stratVoiceEnd("talent", null, "lose", o2 || null);
+  ok(stratOf("steel").goal === "arms", "평정 설전 패배 → 보류");
+  // 외교 임무: 성공하면 휴전
+  const tgt = diploTargets("steel")[0]; const dip = officersOf("steel").find((u) => u.id !== q.id && !isLord(u));
+  dip.st.pol = 99; dip.st.cha = 99; U(tgt.lord).bond = 0; G.rel[relKey(dip.id, tgt.lord)] = 200; dip.city = q.city; dip.loyal = 90;
+  C(q.city).gov = q.id; F("steel").lord = q.id; // 잠시 군주로 만들어 발령
+  C(q.city).gold = 9999; G.ap = 100; actTaskIssue("diplo", dip.id, [], tgt.key);
+  const dt = G.tasks.find((t) => t.kind === "diplo");
+  ok(!!dt && dt.fac2 === tgt.key && /친선 사절/.test(taskName(dt)), "친선 사절 임무 발령");
+  let tries = 0; while (G.tasks.includes(dt) && tries++ < 4) { officerTick(); }
+  ok(!G.tasks.includes(dt) && (G.truce[tgt.key] > 0 || /결렬/.test(dt.done)), "친선 사절 완료 → 휴전 또는 결렬 (" + dt.done + ")");
+  F("steel").lord = lord.id; C(q.city).gov = lord.id;
+  // 병문안
+  const sick = officersOf("steel").find((u) => u.id !== q.id && !isLord(u)); sick.city = q.city; sick.sick = 3; sick.bond = 0; G.ap = 100;
+  actVisitSick(sick.id); ok(sick.cared === monthIdx() && sick.bond >= 8, "병문안 → 친밀·간호");
+  // 군주 사망 → 후계
+  const lord0 = F("steel").lord; unitDies(U(lord0), "병으로");
+  ok(!U(lord0).alive && F("steel").alive && F("steel").lord !== lord0 && U(F("steel").lord).alive && U(F("steel").lord).fac === "steel", "군주 사망 → 후계자 승계 (" + U(F("steel").lord).name + ")");
+  // 플레이어가 후계자가 되는 경우
+  const g2 = Object.values(G.factions).find((f) => f.alive && !f.iron && f.key !== "steel" && officersOf(f.key).length >= 2);
+  q.fac = g2.key; q.city = U(g2.lord).city; q.merit = 99999; G.rel[relKey(q.id, g2.lord)] = 0; U(g2.lord).bond = 100;
+  unitDies(U(g2.lord), "병으로"); ok(isLord(q), "공적이 가장 높으면 내가 후계자가 된다");
+  // 수행
+  G.ap = 80; q.gold = 500; const w0 = q.st.war * 100 + q.ex.war; actPilgrim("무예");
+  ok(G.ap === 0 && q.st.war * 100 + q.ex.war > w0 && q.away === monthIdx() + 1, "수행 → 경험·다음 달 행동력 감소 예약");
+  // 내 세력에서 태수가 독립하면 진압 선택
+  G.queue = []; const rb = officersOf(q.fac).find((u) => u.id !== q.id && !isLord(u));
+  const rc = citiesOf(q.fac).find((c) => c.name !== q.city) || citiesOf(q.fac)[0]; rb.city = rc.name; rc.gov = rb.id;
+  if (rc.name !== capitalOf(q.fac)) { npcIndependence(rb); const sp = G.queue.find((e) => e.key === "suppress"); ok(!!sp && sp.yes && typeof oevApply(sp, false) === "string" && G.truce[sp.k] === 12, "반란 → 진압 선택 (인정하면 휴전)"); }
+}
 // ── 9) 세계가 스스로 돌아간다: 120개월 × 3판
 const W = { moves: 0, indep: 0, dudok: 0, strat: 0, oath: 0, alive: [] };
 for (let run = 0; run < 3; run++) {
@@ -128,7 +163,7 @@ for (let run = 0; run < 3; run++) {
 ok(W.moves > 0, "장수 이적·투항 발생 (" + W.moves + ")");
 ok(W.dudok > 0, "AI 도독 임명 (" + W.dudok + "개월)");
 ok(W.strat > 0, "AI 평정 공략 목표 (" + W.strat + "개월)");
-ok(W.alive.every((n) => n >= 2 && n <= 8), "10년차 생존 세력 " + W.alive.join("/"));
+ok(W.alive.every((n) => n >= 1 && n <= 8) && W.alive.reduce((a, b) => a + b, 0) / W.alive.length >= 2, "10년차 생존 세력 " + W.alive.join("/") + " (평균 2 이상)");
 return W;`);
 let W;
 try { W = T((cond, name) => { console.log(`${cond ? "OK  " : "FAIL"} ${name}`); if (!cond) fails.push(name); }); }

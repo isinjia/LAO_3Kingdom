@@ -544,6 +544,7 @@ function actRest() {
   if (!spend(COST.rest)) return;
   const p = P(); const g = rnd(25, 40); p.hp = clamp(p.hp + g, 0, 100);
   log(`휴식을 취했다. 체력 +${g}`);
+  if (typeof restCure === "function") restCure(p);
 }
 
 function actAppoint(cityName, id) {
@@ -628,7 +629,7 @@ function endMonth() {
   // 다음 달
   G.month++; if (G.month > 12) { G.month = 1; G.year++; }
   G.ap = AP_MAX;
-  if (typeof continueTrip === "function") continueTrip(); // 이어 가던 길
+  if (typeof officerNewMonth === "function") officerNewMonth(); // 병·수행의 행동력 감소, 이어 가던 길
   const p = P(); p.hp = clamp(p.hp + 15, 0, 100);
   if (G.mission && G.year * 12 + G.month > G.mission.deadline) {
     log(`임무 「${MISSION_TYPES[G.mission.type].ko}」 기한을 넘겼다. 공적 -40`, "bad");

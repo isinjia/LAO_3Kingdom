@@ -503,7 +503,7 @@ const UI = {
           h("div", { class: "nameRow" }, gradeBadge(p), h("h2", null, p.name), h("span", { class: "status" }, statusOf(p))),
           h("div", { class: "muted small" }, p.full !== p.name ? p.full : "", " ", typeTag(p)),
           h("div", { class: "muted" }, f ? f.name : "재야", " · ", p.city),
-          typeof roleOf === "function" ? h("button", { class: "roleLine", title: "위명 · 신분과 권한", onclick: () => this.fameModal() }, h("b", null, roleOf(p)), fameTitle(p) ? h("span", null, `위명 「${fameTitle(p).name}」`) : h("span", { class: "muted" }, "위명 없음")) : null,
+          typeof roleOf === "function" ? h("button", { class: "roleLine", title: "위명 · 신분과 권한", onclick: () => this.fameModal() }, h("b", null, roleOf(p)), fameTitle(p) ? h("span", null, `위명 「${fameTitle(p).name}」`) : h("span", { class: "muted" }, "위명 없음"), p.sick ? h("span", { class: "bad" }, `병 ${p.sick}개월`) : null) : null,
           squadName(p) ? h("div", { class: "squadTag sm" }, h("img", { src: `assets/troop/${squadIcon(p)}.webp` }), squadName(p)) : null,
           h("div", { class: "kv" }, h("span", null, h("i", null, "공적"), fmt(p.merit)), h("span", null, h("i", null, "자금"), fmt(p.gold)), h("span", null, h("i", null, "체력"), p.hp)))),
       this.meFold ? h("div", { class: "statLine" }, STATS.map((k) => h("span", null, h("i", null, STAT_KO[k]), p.st[k]))) : h("div", { class: "radarRow sm" }, radar(p.st, 118, f ? f.color : "#e9c46a"), statRows(p.st, p.ex, p)),
@@ -915,6 +915,7 @@ const UI = {
       if (typeof actAppointDudok === "function" && isGov(u)) btns.push(h("button", { disabled: !u.dudok && (G.ap < 10 || dudoksOf(p.fac).length >= dudokCap(p.fac)), title: `거점 6곳마다 1명 (${dudoksOf(p.fac).length}/${dudokCap(p.fac)})`, onclick: () => { m.remove(); actAppointDudok(u.id); this.after(); } }, u.dudok ? "도독 해임" : "도독 임명 (10)"));
     }
     if (typeof roleLv === "function" && !u.iron) {
+      if (same && u.sick) btns.push(h("button", { class: "primary", disabled: G.ap < 15, onclick: () => { m.remove(); actVisitSick(u.id); this.after(); } }, "병문안 (15)"));
       if (same && p.gold >= 100) btns.push(h("button", { disabled: G.ap < 15, onclick: () => { m.remove(); actGift(u.id); this.after(); } }, "선물 (15)"));
       if (roleLv(p) >= 3 && u.fac === p.fac && !isLord(u) && jurisOf(p).includes(u.city)) btns.push(h("button", { disabled: G.ap < 10, title: `거점 자금 100 · 충성 ${u.loyal}`, onclick: () => { m.remove(); actReward(u.id); this.after(); } }, "포상 (10)"));
       if (same && hasFame("무관")) btns.push(h("button", { disabled: G.ap < 20, onclick: () => { m.remove(); actTeach(u.id); this.after(); } }, "무예 지도 (20)"));
@@ -933,7 +934,7 @@ const UI = {
       typeof perOf === "function" && !u.iron ? h("div", { class: "perLine" },
         h("span", { title: PER_DESC[perOf(u).type] }, h("i", null, "성격"), perOf(u).type), h("span", null, h("i", null, "야망"), perOf(u).amb), h("span", null, h("i", null, "의리"), perOf(u).gi),
         u.id !== p.id ? h("span", { class: relOf(p.id, u.id) < 0 ? "bad" : "" }, h("i", null, "나와"), `${stageWith(u.id)} (${relOf(p.id, u.id)})`) : h("span", null, h("i", null, "신분"), roleOf(u)),
-        u.dudok ? h("span", null, h("i", null, "직위"), "도독") : null, taskBusy(u.id) ? h("span", null, h("i", null, "임무"), taskName((G.tasks || []).find((t) => t.doers.includes(u.id)))) : null) : null,
+        u.dudok ? h("span", null, h("i", null, "직위"), "도독") : null, u.sick ? h("span", { class: "bad" }, h("i", null, "상태"), `병 (${u.sick}개월)`) : null, taskBusy(u.id) ? h("span", null, h("i", null, "임무"), taskName((G.tasks || []).find((t) => t.doers.includes(u.id)))) : null) : null,
       typeof topRels === "function" && !u.iron ? (() => { const rs = topRels(u.id, 6).filter((r) => r.u.id !== p.id || u.id === p.id); return rs.length ? h("details", { class: "mateHint" }, h("summary", null, `인맥 (${rs.length})`), rs.map((r) => h("span", { class: r.v < 0 ? "bad" : "" }, sdface(r.u, 22), `${r.u.name} — ${r.s} (${r.v})`))) : null; })() : null,
       h("div", { class: "radarRow" }, radar(u.st, 140, f ? f.color : "#e9c46a"), statRows(u.st, null, u)),
       u.iron ? null : h("div", { class: "eqLine" }, h("span", { class: "muted small" }, "장비"), this.eqSlots(u)),
@@ -1035,6 +1036,7 @@ const UI = {
     const folk = unitsIn(p.city).filter((u) => u.id !== p.id && !u.iron);
     grid.append(this.cmd("선물", "talk", 15, () => this.pickUnit("선물", "개인 자금 100을 보내 친밀을 높인다. 같은 세력이면 충성 +3.", folk, (u) => `${stageWith(u.id)} · 친밀 ${u.bond}`, (u) => actGift(u.id)), p.gold < 100 ? "개인 자금 100 필요" : !folk.length ? "이 거점에 다른 장수가 없다" : null));
     grid.append(this.cmd("의협 활동", "order", 25, () => actChivalry()));
+    grid.append(this.cmd("수행", "train", G.ap, () => this.pilgrimModal(), G.ap < 50 ? "행동력 50 이상 남아 있어야 한다" : p.gold < 100 ? "개인 자금 100 필요" : null));
     grid.append(this.cmd("교역", "comm", 25, () => actTrade(), p.gold < 100 ? "개인 자금 100 필요" : c.owner && F(c.owner).iron ? "철충 거점" : null));
     if (hasFame("무관")) grid.append(this.cmd("무예 지도", "train", 20, () => this.pickUnit("무예 지도", "같은 거점 장수의 무력을 단련해 준다.", folk, (u) => `무력 ${u.st.war} · 친밀 ${u.bond}`, (u) => actTeach(u.id)), folk.length ? null : "이 거점에 다른 장수가 없다"));
     if (hasFame("문관")) grid.append(this.cmd("민정 시찰", "agri", 25, () => actInspect(), own ? null : "소속 거점에서만"));
@@ -1092,7 +1094,7 @@ const UI = {
     const draw = () => {
       body.innerHTML = "";
       const k = TASK_KIND[kind]; const city = mode === "issue" ? (doer ? doer.city : p.city) : p.city; const c = C(city);
-      body.append(h("div", { class: "tgtList" }, Object.entries(TASK_KIND).map(([key, x]) => h("button", { class: "tgt" + (key === kind ? " on" : ""), onclick: () => { kind = key; aim = null; draw(); } }, icon(key === "search" ? "search" : key === "recruit" ? "recruit" : key, 18), h("span", null, x.ko), h("small", null, `${STAT_KO[x.stat]} · 자금 ${x.gold}`)))));
+      body.append(h("div", { class: "tgtList" }, Object.entries(TASK_KIND).map(([key, x]) => h("button", { class: "tgt" + (key === kind ? " on" : ""), onclick: () => { kind = key; aim = null; draw(); } }, icon(key === "search" ? "search" : key === "recruit" ? "recruit" : key === "diplo" ? "talk" : key, 18), h("span", null, x.ko), h("small", null, `${STAT_KO[x.stat]} · 자금 ${x.gold}`)))));
       if (mode === "issue") {
         body.append(h("h4", null, `수행 장수 (관할 ${jurisOf(p).join(", ")})`));
         body.append(h("div", { class: "warList" }, pool.length ? pool.map((u) => h("label", { class: "wrow" + (doer === u ? " on" : "") }, h("input", { type: "radio", name: "doer", checked: doer === u, onchange: () => { doer = u; helpers.clear(); aim = null; draw(); } }), sdface(u, 36), h("span", null, u.name, " ", gradeBadge(u)), h("small", null, `${u.city} · ${STAT_KO[k.stat]} ${u.st[k.stat]} · 충성 ${u.loyal}${issueAccept(u) < 100 ? ` (수락 ${issueAccept(u)}%)` : ""}`), h("b", null, ""))) : h("span", { class: "muted" }, "임무가 없는 관할 장수가 없다.")));
@@ -1104,11 +1106,16 @@ const UI = {
         aim = aim && free.includes(U(aim)) ? aim : (free[0] ? free[0].id : null);
         body.append(h("h4", null, "교섭 상대 (같은 거점의 재야 장수)"), free.length ? h("div", { class: "tgtList" }, free.map((u) => h("button", { class: "tgt" + (aim === u.id ? " on" : ""), onclick: () => { aim = u.id; draw(); } }, sdface(u, 24), h("span", null, u.name)))) : h("p", { class: "muted" }, "이 거점에는 재야 장수가 없다."));
       }
+      if (k.diplo) {
+        const fs = diploTargets(p.fac);
+        aim = aim && fs.includes(F(aim)) ? aim : (fs[0] ? fs[0].key : null);
+        body.append(h("h4", null, "사절을 보낼 세력 (성공하면 12개월 휴전 · 정치·매력과 그 군주와의 관계가 성공률을 정한다)"), fs.length ? h("div", { class: "tgtList" }, fs.map((f) => h("button", { class: "tgt" + (aim === f.key ? " on" : ""), onclick: () => { aim = f.key; draw(); } }, flag(f, true), h("span", null, f.name), h("small", null, `거점 ${citiesOf(f.key).length}`)))) : h("p", { class: "muted" }, "사절을 보낼 세력이 없다."));
+      }
       const doers = mode === "issue" ? (doer ? [doer.id, ...helpers] : []) : [p.id];
       const est = doers.length ? { kind, doers, need: k.need, prog: 0, start: dayNow() } : null;
       if (est) est.eta = taskEta(est);
       const needGold = k.gold + (mode === "propose" ? 100 : 0);
-      const reason = !doers.length ? "수행 장수가 없다" : k.aim && !aim ? "교섭 상대가 없다" : c.gold < needGold ? `거점 자금 부족 (${needGold})` : null;
+      const reason = !doers.length ? "수행 장수가 없다" : (k.aim || k.diplo) && !aim ? "교섭 상대가 없다" : c.gold < needGold ? `거점 자금 부족 (${needGold})` : null;
       body.append(h("p", { class: "muted small" }, est ? `${city} · 하루 진행 ${taskRate(est).toFixed(1)} / 목표 ${k.need} → 예상 완료 ${dayStr(est.eta)}${coopBonus(est) ? ` · 협력 보너스 +${Math.round(coopBonus(est) * 100)}%` : ""}` : ""));
       body.append(h("div", { class: "btns" },
         h("button", { class: "primary", disabled: !!reason, title: reason || "", onclick: () => { m.remove(); if (mode === "issue") actTaskIssue(kind, doer.id, [...helpers], aim); else actTaskPropose(kind, aim); this.after(); } }, reason || (mode === "issue" ? "발령 (행동력 10)" : `제안 (행동력 20 · 승인 ${proposeTaskChance(p)}%)`)),
@@ -1129,10 +1136,30 @@ const UI = {
       if (goal === "attack") body.append(h("h4", null, "공략 목표"), h("div", { class: "tgtList" }, tg.map((n) => h("button", { class: "tgt" + (n === target ? " on" : ""), onclick: () => { target = n; draw(); } }, flag(F(C(n).owner), true), h("span", null, n), h("small", null, `병력 ${fmt(C(n).troops)}`)))));
       body.append(h("p", { class: "muted small" }, lord ? "정한 목표는 이번 분기(3개월) 동안 소속 장수들의 행동을 바꾼다. 분기 안에 이루면 공적 보상." : `받아들여지면 공적 +40 · 군주 친밀 +3, 분기 안에 이루면 추가 공적. 채택 가능성 약 ${voiceChance(p)}%`));
       body.append(h("div", { class: "btns" },
-        h("button", { class: "primary", disabled: goal === "attack" && !target, onclick: () => { m.remove(); lord ? actStratSet(goal, target) : actStratVoice(goal, target); this.after(); } }, lord ? "결정 (행동력 10)" : "진언 (행동력 15)"),
+        h("button", { class: "primary", disabled: goal === "attack" && !target, onclick: () => { m.remove(); if (lord) { actStratSet(goal, target); this.after(); } else this.stratVoiceFlow(goal, target); } }, lord ? "결정 (행동력 10)" : "진언 (행동력 15)"),
         h("button", { onclick: () => m.remove() }, "취소")));
     };
     draw();
+  },
+  // 평정 의견: 다른 중신이 반론하면 설전으로 맞서거나 군주에게 맡긴다
+  async stratVoiceFlow(goal, target) {
+    const opp = stratVoiceBegin(); this.after();
+    if (opp === false) return;
+    let mode = "roll";
+    if (opp) {
+      const o = U(opp);
+      const ok = await this.confirm("평정 — 반론", `${o.name}: "${pick(["그 방침에는 찬성할 수 없어. 지금 우리 형편을 생각해 봐.", "말은 그럴듯하지만, 근거가 약해.", "그건 너무 성급한 판단이야."])}"\n\n설전으로 맞서 이기면 의견이 그대로 채택되고, 지면 보류된다.\n물러서면 군주의 판단에 맡긴다 (채택 가능성 약 ${Math.max(5, voiceChance(P()) - 10)}%).`, o, "설전으로 맞선다", "군주에게 맡긴다");
+      if (ok) { const won = await new Promise((res) => Debate.start(P(), o, (w) => res(!!w))); mode = won ? "win" : "lose"; }
+      else mode = "yield";
+    }
+    stratVoiceEnd(goal, target, mode, opp); this.after();
+  },
+  // 수행: 무예·학문
+  pilgrimModal() {
+    const p = P();
+    const m = this.modal([h("h3", null, icon("train", 22), "수행"), h("p", { class: "muted" }, `이번 달 남은 행동력(${G.ap})을 모두 쓰고 노자 100을 들여 수행을 떠난다. 남은 행동력이 많을수록 경험이 크고, 30% 확률로 새 특기를 익힌다. 다음 달 행동력 -30.`),
+      h("div", { class: "tgtList" }, Object.entries(PILGRIM).map(([k, x]) => h("button", { class: "tgt", onclick: () => { m.remove(); actPilgrim(k); this.after(); } }, h("span", null, `${k} 수행`), h("small", null, `${STAT_KO[x.main]}·${STAT_KO[x.sub]} · 특기 ${x.skills.filter((s) => !p.skills.includes(s)).join("·") || "없음"}`)))),
+      h("div", { class: "btns" }, h("button", { onclick: () => m.remove() }, "닫기"))], "list");
   },
   orderMoveModal() {
     const p = P(); const jz = jurisOf(p);
@@ -1203,7 +1230,7 @@ const UI = {
     const T = [
       ["기본 흐름", [["행동력", "매달 100. 명령마다 행동력을 쓰고, 다 쓰면 「다음 달 ▶」. 매달 자동 저장된다."], ["신분", "재야 → 사관 → 승진(종사·교위·편장군·장군·대장군) → 태수 임명 → 독립 또는 군주."], ["평정", "사관 중이면 매달 임무 3개 중 하나를 고른다. 2개월 안에 달성하면 큰 공적."], ["승리", "32개 거점을 모두 손에 넣으면 천하통일. 철충을 섬멸하고 20거점 이상을 확보해도 ‘패권 승리’."]]],
       ["내정·인물", [["내정", "농업(식량)·상업(자금)·기술·치안·방벽·징병. 특기가 있으면 효과 1.5배. 거점 자금 50 필요."], ["탐방", "재야 인재 발견, 자금·전술 데이터 입수. 재야 장수는 지도의 인물 목록에서 점선 테두리."], ["교류", "친밀도를 올린다. 50이면 개인 대화, 100이면 의자매(義) — 거병·독립 때 함께한다."], ["등용·사관", "대화로 확률 판정, 또는 설전에서 이기면 확정. 매력·친밀·명성이 성공률을 높인다."]]],
-      ["장수제", [["이동", "지도 어디든 길을 따라 갈 수 있다(철충 거점은 지나갈 수 없음). 출발 15 + 구간마다 행동력 15. 행동력이 모자라면 남은 길은 다음 달 초에 이어 간다. 다른 세력 거점에서는 방문·교류·탐방만 하고 내정은 할 수 없다. 태수가 거점을 떠나면 태수 자리를 내놓는다."], ["신분과 권한", "재야 → 일반 → 중신(편장군 이상) → 태수 → 도독 → 군주. 신분이 오를수록 쓸 수 있는 명령이 늘어난다. 「임무」 탭(4)의 「위명·권한」에서 권한표를 볼 수 있다."], ["임무", "상관이 임무를 내리고, 중신은 직접 제안할 수 있다. 태수 이상은 관할 장수에게 발령한다. 수행 장수의 능력치로 매일 진행되고(한 달 30일), 친우 이상인 협력자가 있으면 빨라진다."], ["평정", "분기마다 세력의 전략 목표(내정 강화·군비 확충·인재 확보·수비 강화·공략)를 정한다. 중신은 의견을 내고, 군주는 직접 결정한다. 목표는 장수들의 실제 행동을 바꾼다."], ["인간관계", "교류·선물·연회·함께 하는 임무·함께 싸운 전투로 가까워지고, 적장으로 맞서면 적대가 쌓인다. 친우·막역지우·의자매 단계가 있고, 장수끼리도 관계를 맺어 등용·이적·독립에 영향을 준다."], ["위명", "무관·문관·군사·장군·협객·상인 6계통. 실적이 쌓이면 상위 위명이 되고 새 명령이나 효과가 열린다. 협객(의협 활동)·상인(교역)은 재야에서도 걸을 수 있는 길이다."], ["개인 이벤트", "매달 초 연회 초대·부탁·인재 추천·일기토 신청·설전 신청·이적 권유·독립 권유·재해·신하의 청원 중 하나가 찾아오기도 한다. 수락하느냐에 따라 관계·공적·소속이 달라진다. 12월에는 논공행상으로 한 해의 공을 따진다."], ["세계", "장수마다 성격·야망·의리가 있다. 충성은 매달 군주와의 관계·대우에 따라 변하고, 충성이 낮으면 하야하거나 친구가 있는 세력으로 떠난다. 야망이 큰 태수는 독립하기도 한다."]]],
+      ["장수제", [["이동", "지도 어디든 길을 따라 갈 수 있다(철충 거점은 지나갈 수 없음). 출발 15 + 구간마다 행동력 15. 행동력이 모자라면 남은 길은 다음 달 초에 이어 간다. 다른 세력 거점에서는 방문·교류·탐방만 하고 내정은 할 수 없다. 태수가 거점을 떠나면 태수 자리를 내놓는다."], ["신분과 권한", "재야 → 일반 → 중신(편장군 이상) → 태수 → 도독 → 군주. 신분이 오를수록 쓸 수 있는 명령이 늘어난다. 「임무」 탭(4)의 「위명·권한」에서 권한표를 볼 수 있다."], ["임무", "상관이 임무를 내리고, 중신은 직접 제안할 수 있다. 태수 이상은 관할 장수에게 발령한다. 수행 장수의 능력치로 매일 진행되고(한 달 30일), 친우 이상인 협력자가 있으면 빨라진다."], ["평정", "분기마다 세력의 전략 목표(내정 강화·군비 확충·인재 확보·수비 강화·공략)를 정한다. 중신은 의견을 내고, 군주는 직접 결정한다. 목표는 장수들의 실제 행동을 바꾼다."], ["인간관계", "교류·선물·연회·함께 하는 임무·함께 싸운 전투로 가까워지고, 적장으로 맞서면 적대가 쌓인다. 친우·막역지우·의자매 단계가 있고, 장수끼리도 관계를 맺어 등용·이적·독립에 영향을 준다."], ["위명", "무관·문관·군사·장군·협객·상인 6계통. 실적이 쌓이면 상위 위명이 되고 새 명령이나 효과가 열린다. 협객(의협 활동)·상인(교역)은 재야에서도 걸을 수 있는 길이다."], ["질병·사망·후계", "장수는 병에 걸리기도 하고, 앓는 동안 세상을 떠날 수 있다. 같은 거점이면 병문안(행동력 15)으로 위험을 줄인다. 군주가 죽으면 공적·관계로 후계자가 정해지고(내가 될 수도 있다), 새 군주를 따르지 않는 장수는 떠나거나 독립한다. 나는 죽지 않지만 병에 걸리면 행동력이 줄고, 휴식하면 빨리 낫는다."], ["수행·평정 설전·외교", "「수행」은 이번 달 남은 행동력을 모두 써서 무예·학문을 닦고 특기를 익힌다. 평정에서 의견을 내면 다른 중신이 반론하기도 하는데, 설전으로 이기면 의견이 채택된다. 「친선 사절」 임무가 성공하면 그 세력과 12개월 휴전한다."], ["개인 이벤트", "매달 초 연회 초대·부탁·인재 추천·일기토 신청·설전 신청·이적 권유·독립 권유·재해·신하의 청원·도적 출몰·떠돌이 상인·병상의 소식 중 하나가 찾아오기도 한다. 내 세력에서 반란이 일어나면 진압 여부를 고른다. 수락하느냐에 따라 관계·공적·소속이 달라진다. 12월에는 논공행상으로 한 해의 공을 따진다."], ["세계", "장수마다 성격·야망·의리가 있다. 충성은 매달 군주와의 관계·대우에 따라 변하고, 충성이 낮으면 하야하거나 친구가 있는 세력으로 떠난다. 야망이 큰 태수는 독립하기도 한다."]]],
       ["전쟁", [["출진", "태수·군주는 인접 거점으로 출진. 일반 장수는 「출진 상신」으로 승인받으면 총대장이 된다."], ["병종 상성", "경장 ▶ 기동 ▶ 중장 ▶ 경장. 우위면 피해 +20%, 열세면 −15%."], ["역할", "공격기: 피해 +10% · 보호기: 받는 피해 −12% · 지원기: 방어 시 아군 전체 사기 회복, 책략 성공률 +10%."], ["부대 결속", "원작에서 같은 부대(스틸 라인, 둠 브링어 등)인 장수가 함께 출진하면 1명당 공격력 +7%."], ["승패", "공격측은 10턴 안에 수비군 전멸 또는 수비 총대장 격파. 총대장이 패주하면 그 군은 패배."]]],
       ["일기토·설전", [["일기토", "공격·강공·방어·필살. 강공은 방어에 간파당해 반격을 받는다. 방어로 기력을 모아 100이 되면 필살."], ["설전", "논리 ▶ 감정 ▶ 사실 ▶ 논리. 상성으로 이기면 큰 피해, 같은 종류면 숫자 비교. 6라운드 후 기세가 높은 쪽 승리."]]],
       ["단축키", [["메인 화면", "Space / N 다음 달 · 1 내정 · 2 군사 · 3 개인 · 4 임무 · F 세력 · U 장수 · G 외교 · V 내 위치 · C 연표 · M 메뉴 · H 또는 ? 가이드"], ["전투", "A 공격 · C 돌격 · P 책략 · D 방어 · S 일기토 (명령할 부대가 선택된 상태에서)"], ["대화·창", "Enter / Space 다음 대사 · Esc 대화 건너뛰기·창 닫기"]]],
