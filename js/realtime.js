@@ -8,10 +8,20 @@
 
 const RT_SPEED = [0, 1000, 450, 180]; // 하루에 걸리는 밀리초 (0 = 멈춤)
 const RT_SPEED_KO = ["멈춤", "보통", "빠름", "매우 빠름"];
-const TRAVEL_UNIT = 45; // 지도 거리 45마다 하루
+const TRAVEL_UNIT = 22; // 지도 거리 22마다 하루 (이웃 거점까지 보통 5일, 3~10일)
 const absDay = () => monthStartDay() + Math.min(29, G.day || 0);
 function rtInit() { G.rt = true; G.day = G.day || 0; G.marches ||= []; G.apFrac ||= 0; }
-function hopDays(a, b) { const A = C(a), B = C(b); return A && B ? clamp(Math.round(Math.hypot(A.x - B.x, A.y - B.y) / TRAVEL_UNIT), 1, 4) : 1; }
+function hopDays(a, b) { const A = C(a), B = C(b); return A && B ? clamp(Math.round(Math.hypot(A.x - B.x, A.y - B.y) / TRAVEL_UNIT), 3, 10) : 3; }
+// 여러 구간 길 위의 위치: path = [출발, …,도착], dep = 출발한 날
+function posOnPath(path, dep, now) {
+  let t = now - dep;
+  for (let i = 1; i < path.length; i++) {
+    const A = C(path[i - 1]), B = C(path[i]), d = hopDays(path[i - 1], path[i]);
+    if (t <= d || i === path.length - 1) { const k = clamp(t / d, 0, 1); return { x: A.x + (B.x - A.x) * k, y: A.y + (B.y - A.y) * k, a: Math.atan2(B.y - A.y, B.x - A.x), A, B }; }
+    t -= d;
+  }
+  const A = C(path[0]); return { x: A.x, y: A.y, a: 0, A, B: A };
+}
 const pathDays = (from, path) => path.reduce((s, n, i) => s + hopDays(i ? path[i - 1] : from, n), 0);
 
 // 하루 진행. 달이 바뀌면 true
@@ -21,8 +31,12 @@ function dayTick() {
   G.ap = Math.min(AP_MAX, G.ap + add); // 행동력은 하루에 조금씩 찬다 (한 달에 100)
   officerDay();
   marchDay();
+  walkerDay();
   tripDay();
-  if (G.day >= 30) { endMonth(); G.day = 0; return true; }
+  if (G.day >= 30) {
+    const before = {}; for (const u of Object.values(G.units)) if (u.alive && !u.iron) before[u.id] = { city: u.city, fac: u.fac };
+    endMonth(); G.day = 0; rtWalkers(before); return true;
+  }
   return false;
 }
 
@@ -53,7 +67,7 @@ function marchDay() {
     if (!m.atk) {
       if (d < m.dep) continue;
       if (!f || !f.alive || from.owner !== m.fac || to.owner === m.fac || from.troops < 1500) { drop(); continue; }
-      m.drafted = p.fac === m.fac && p.city === m.from && !isLord(p) && !p.trip;
+      m.drafted = p.fac === m.fac && p.city === m.from && !isLord(p) && !p.trip && !p.marching;
       const send = Math.round(from.troops * 0.65);
       const atk = pickArmy(m.from, m.fac, send, 5, m.drafted ? p : null);
       if (!atk.length && !f.iron) { drop(); continue; }
@@ -68,17 +82,52 @@ function marchDay() {
     }
     if (d < m.arr) continue;
     drop(); G._mapDirty = true;
+    if (m.player) p.marching = null;
     const atk = m.atk.map((x) => ({ u: U(x.id), troops: x.troops })).filter((x) => x.u && x.u.alive && x.u.fac === m.fac);
     if (to.owner === m.fac || (!atk.length && !f.iron)) { // 이미 손에 넣었거나 장수가 모두 빠졌으면 병력만 합류·귀환
       const back = to.owner === m.fac ? to : from; back.troops += m.troops; continue;
     }
     const b = prepareBattle({ atkFac: m.fac, from: m.from, to: m.to, atk, sent: m.sent });
     const playerDefends = to.owner && p.fac === to.owner && p.city === m.to && !p.trip;
-    if (m.drafted || playerDefends) G.queue.push({ type: "battle", war: b, playerSide: m.drafted ? "atk" : "def", commander: !m.drafted && (isGov(p) || isLord(p)) });
+    if (m.player) { log(`출진한 군대가 ${m.to}에 도착했다. 전투 개시!`, "war"); G.queue.push({ type: "battle", war: b, playerSide: "atk", commander: true }); }
+    else if (m.drafted || playerDefends) G.queue.push({ type: "battle", war: b, playerSide: m.drafted ? "atk" : "def", commander: !m.drafted && (isGov(p) || isLord(p)) });
     else resolvePrepared(b);
   }
 }
 const rtN = (n) => Math.round(n).toLocaleString();
+
+// 내 출진: 병력이 거점을 떠나 길을 따라 행군하고, 도착한 날 전투가 열린다
+function rtSortie(war) {
+  const d = absDay(); const p = P();
+  const m = { id: (G.flags.marchN = (G.flags.marchN || 0) + 1), fac: war.atkFac, from: war.from, to: war.to, dep: d, arr: d + hopDays(war.from, war.to), atk: war.atk.map((x) => ({ id: x.u.id, troops: x.troops })), sent: war.sent, troops: war.sent, player: true };
+  G.marches.push(m); p.marching = m.id; G._mapDirty = true;
+  G.toast = { text: `${jo(war.to, "으로")} 진군 — ${m.arr - d}일 뒤 도착`, kind: "" };
+}
+
+// ── 다른 장수들의 이동: 월말에 거점을 옮긴 장수는 다음 달 중에 길을 따라 걸어간다 ──
+const TRAVELER_MAX = 40;
+function rtWalkers(before) {
+  G.walkers ||= []; let n = 0;
+  for (const [id, b] of Object.entries(before)) {
+    const u = U(id); if (!u || !u.alive || u.missing || u.iron || id === G.player || u.city === b.city || u.fac !== b.fac || !C(u.city) || !C(b.city)) continue;
+    if (++n > TRAVELER_MAX) break;
+    const to = u.city; const path = [b.city, ...(routeTo(b.city, to) || [to])];
+    const tc = C(to); if (tc.gov === u.id) tc.gov = null;
+    u.city = b.city; // 도착할 때까지는 떠난 거점에 있다
+    const dep = monthStartDay() + rnd(0, 12);
+    G.walkers.push({ id, path, dep, arr: dep + pathDays(b.city, path.slice(1)), fac: u.fac });
+  }
+  for (const c of Object.values(G.cities)) if (c.gov && U(c.gov) && U(c.gov).city !== c.name) { c.gov = null; assignGov(c); }
+}
+function walkerDay() {
+  const d = absDay();
+  for (const w of (G.walkers || []).slice()) {
+    if (d < w.arr) continue;
+    G.walkers.splice(G.walkers.indexOf(w), 1);
+    const u = U(w.id); const to = w.path[w.path.length - 1];
+    if (u && u.alive && u.city === w.path[0] && u.fac === w.fac) { u.city = to; assignGov(C(to)); G._mapDirty = true; }
+  }
+}
 
 // ── 내 여정 ──
 function rtTravel(to, path) {
@@ -145,6 +194,8 @@ Object.assign(UI, {
       h("button", { class: "rtPlay" + (play ? " on" : ""), title: "진행 / 멈춤 (스페이스)", onclick: () => { this.rtSpeed = play ? 0 : this.rtLastSpeed || 1; Sound.sfx("click", 0.5); this.rtControls(); } }, play ? "⏸" : "▶"),
       ...[1, 2, 3].map((s) => h("button", { class: "rtSpd" + (this.rtSpeed === s ? " on" : ""), title: `${RT_SPEED_KO[s]} (하루 ${RT_SPEED[s] / 1000}초)`, onclick: () => { this.rtSpeed = s; this.rtLastSpeed = s; Sound.sfx("click", 0.4); this.rtControls(); } }, "▸".repeat(s))),
       h("button", { class: "rtSkip", title: "이번 달 남은 날을 한꺼번에 보낸다", onclick: () => this.rtSkipMonth() }, "⏭"));
+    const mm = P().marching && (G.marches || []).find((m) => m.id === P().marching);
+    if (mm) box.prepend(h("span", { class: "rtTrip war", title: `${mm.from} → ${mm.to} · 병력 ${rtN(mm.troops)}` }, `⚔ ${mm.to} ${Math.max(0, mm.arr - absDay())}일`));
     const tr = P().trip;
     if (tr && tr.hop) box.prepend(h("span", { class: "rtTrip", title: `${P().city} → ${tr.hop.to}${tr.path.length ? " → " + tr.path.join(" → ") : ""}` }, `→ ${tr.to} ${Math.max(0, tr.hop.arr - absDay()) + pathDays(tr.hop.to, tr.path)}일`, h("button", { class: "mini", onclick: () => { P().trip = null; log(`${jo(tr.to, "으로")} 가던 길을 멈췄다. (${P().city})`); this.render(); } }, "멈추기")));
   },
@@ -166,6 +217,11 @@ Object.assign(UI, {
       const t = clamp((now - m.dep) / Math.max(1, m.arr - m.dep), 0, 1);
       parts.push({ x: A.x + (B.x - A.x) * t, y: A.y + (B.y - A.y) * t, a: Math.atan2(B.y - A.y, B.x - A.x), col: f.color, n: m.troops, A, B, mine: f.key === P().fac, hit: B.owner === P().fac, id: "m" + m.id, left: Math.max(0, Math.ceil(m.arr - now)) });
     }
+    for (const w of G.walkers || []) {
+      if (now < w.dep || now >= w.arr) continue;
+      const q = posOnPath(w.path, w.dep, now); const u = U(w.id); const f = F(w.fac);
+      parts.push({ walker: true, x: q.x, y: q.y, id: "w" + w.id, u, col: f ? f.color : "#aaa", to: w.path[w.path.length - 1], left: Math.ceil(w.arr - now) });
+    }
     const p = P(); const tr = p.trip && p.trip.hop;
     if (tr) { const A = C(tr.from), B = C(tr.to); const t = clamp((now - tr.dep) / Math.max(1, tr.arr - tr.dep), 0, 1); parts.push({ me: true, x: A.x + (B.x - A.x) * t, y: A.y + (B.y - A.y) * t, A, B, id: "me" }); }
     for (const q of parts) key.push(q.id);
@@ -173,6 +229,12 @@ Object.assign(UI, {
     if (g.dataset.key !== key.join(",")) {
       g.dataset.key = key.join(","); g.innerHTML = "";
       for (const q of parts) {
+        if (q.walker) {
+          if (!svg.querySelector("#rtClipS")) { const cp = sv("clipPath", { id: "rtClipS" }, sv("circle", { r: 8 })); (svg.querySelector("defs") || svg).append(cp); }
+          const t = sv("g", { class: "rtWalker", "data-id": q.id }); t.append(sv("circle", { r: 9.5, fill: "#0b0d10", stroke: q.col, "stroke-width": 2 }), sv("image", { href: `assets/sdface/${q.u.id}.webp`, x: -8, y: -8, width: 16, height: 16, "clip-path": "url(#rtClipS)" }));
+          const tip = document.createElementNS("http://www.w3.org/2000/svg", "title"); tip.textContent = `${q.u.name} → ${q.to}`; t.append(tip);
+          g.append(t); continue;
+        }
         if (q.me) {
           g.append(sv("line", { x1: q.A.x, y1: q.A.y, x2: q.B.x, y2: q.B.y, class: "rtTrail me" }));
           if (!svg.querySelector("#rtClip")) { const cp = sv("clipPath", { id: "rtClip" }, sv("circle", { r: 13 })); (svg.querySelector("defs") || svg).append(cp); }
@@ -189,6 +251,7 @@ Object.assign(UI, {
     }
     for (const q of parts) {
       const t = g.querySelector(`[data-id="${q.id}"]`); if (!t) continue;
+      if (q.walker) { t.setAttribute("transform", `translate(${q.x.toFixed(1)},${q.y.toFixed(1)})`); continue; }
       t.setAttribute("transform", `translate(${q.x.toFixed(1)},${q.y.toFixed(1)}) scale(${q.me ? 1.35 : 1.75})${q.me ? "" : ` rotate(${(q.a * 180 / Math.PI).toFixed(0)})`}`);
       if (!q.me) { const tx = t.querySelector("text"); tx.setAttribute("transform", Math.abs(q.a) > Math.PI / 2 ? "rotate(180)" : ""); const tip = t.querySelector("title"); if (tip) tip.textContent = `${F(G.marches.find((m) => "m" + m.id === q.id)?.fac)?.name || ""} → ${q.B.name} · 병력 ${rtN(q.n)} · ${q.left}일 뒤 도착`; }
     }

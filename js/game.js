@@ -271,6 +271,7 @@ function addMerit(u, v) {
 
 // ── 플레이어 행동 ─────────────────────────
 function spend(cost) {
+  if (G.rt && P().marching) { notify("출진 중", "군대를 이끌고 행군하는 중이다. 전투가 끝나면 할 수 있다."); return false; }
   if (G.rt && P().trip) { notify("이동 중", `${jo(P().trip.to, "으로")} 가는 길이다. 도착하거나 이동을 멈춘 뒤에 할 수 있다.`); return false; }
   if (G.ap < cost) { notify("행동력 부족", G.rt ? `행동력이 부족하다. (필요 ${cost} / 남음 ${G.ap}) 행동력은 하루에 약 3씩 찬다.` : `이번 달에 남은 행동력이 부족하다. (필요 ${cost} / 남음 ${G.ap})`); return false; }
   G.ap -= cost; return true;
@@ -998,6 +999,7 @@ function actWar(to, alloc, proposal) {
   if (!atk.length || sum > from.troops) return notify("출진 불가", "병력 배분이 올바르지 않다.");
   from.troops -= sum;
   log(`${from.name}에서 ${jo(to, "으로")} 출진! (병력 ${sum.toLocaleString()})`, "war");
+  if (G.rt && typeof rtSortie === "function") return rtSortie({ atkFac: p.fac, from: from.name, to, atk, sent: sum }); // 실시간: 지도 위를 행군한 뒤 도착한 날 전투
   G.queue.push({ type: "battle", war: prepareBattle({ atkFac: p.fac, from: from.name, to, atk, sent: sum }), playerSide: "atk", commander: true });
 }
 
