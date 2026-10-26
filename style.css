@@ -746,6 +746,13 @@ body:has(#field.on) .cutin { top: calc(var(--fhead, 72px) + 2px); height: 150px;
 .fHp i { display: block; height: 100%; background: linear-gradient(90deg, #4fd27a, #a8f06a); } .fLab.foe .fHp i { background: linear-gradient(90deg, #e2563f, #ff9a6a); }
 .fMp i { display: block; height: 100%; background: #6fb8ff; } .fLab.ready .fMp i, .fGen.ready .fMp i { background: linear-gradient(90deg, #ffd36a, #fff2b0); box-shadow: 0 0 6px #ffd36a; }
 .fMor i { display: block; height: 100%; background: #d8a24f; } .fMor.low i { background: #ff6a5a; }
+/* 진형 유지력(청록)·피로도(보라) — 장수 라벨 맨 아래 얇은 줄과 선택 패널 */
+.fCoh, .fFat, .fLab .fCo { height: 3px; border-radius: 2px; background: #000a; overflow: hidden; }
+.fCoh i, .fLab .fCo i { display: block; height: 100%; background: #4fc8c0; transition: width .3s; } .fCoh.low i, .fLab .fCo.low i { background: #ff9a3a; }
+.fFat i { display: block; height: 100%; background: #9a86d8; } .fFat.high i { background: #d86ab8; }
+.fLab .fCo { height: 2px; } .fLab.mini .fCo { display: none; }
+.fLab .fSt.bad { color: #ff8a6a; }
+.fSelStat { font-size: 10px; color: #9fb8c8; white-space: nowrap; }
 .fCamp { position: absolute; left: 0; top: 0; display: grid; justify-items: center; transform-origin: bottom; } .fCamp i { width: 4px; height: 46px; margin-top: -50px; background: #c9b07a; border-radius: 2px; position: relative; }
 .fCamp i::after { content: ""; position: absolute; left: 4px; top: 0; width: 38px; height: 24px; background: var(--cc); clip-path: polygon(0 0, 100% 0, 82% 50%, 100% 100%, 0 100%); opacity: .9; }
 .fCamp.def i::after { left: auto; right: 4px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 18% 50%); }
@@ -864,3 +871,7 @@ body:has(#field.on) .cutin { top: calc(var(--fhead, 72px) + 2px); height: 150px;
 .perLine .bad, .mateHint .bad { color: #ef8a80; }
 .helpRow.cur { background: #e2b75a14; border-radius: 8px; }
 .helpRow.locked { opacity: 0.55; }
+/* 전술 명령 10종: 다섯 개씩 두 줄 */
+.fCmds { display: grid; grid-template-columns: repeat(5, auto); gap: 3px; }
+.fCmds .fCmd { min-width: 44px; padding: 3px 4px 2px; font-size: 11px; } .fCmds .fCmd .ico { width: 16px !important; height: 16px !important; }
+@media (max-width: 1440px) { .fSelStat { font-size: 9px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; } .fCmds .fCmd { min-width: 38px; } }
